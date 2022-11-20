@@ -6,15 +6,12 @@ namespace Collections.Extensions.SlotMap
     partial struct SlotMapKey32
     {
         /// <summary>
-        /// Represents a 2 bits tag.
+        /// Represents a 8 bits tag.
         /// </summary>
         public readonly struct KeyTag : IEquatable<KeyTag>, IComparable<KeyTag>
         {
-            private const uint MASK = 0x_C0_00_00_00;
-            private const int BITS_SHIFT = 30;
-
             private const byte MIN = 0x_00;
-            private const byte MAX = 0x_03;
+            private const byte MAX = 0x_FF;
 
             public static readonly KeyTag MinValue = new(MIN);
             public static readonly KeyTag MaxValue = new(MAX);
@@ -27,14 +24,6 @@ namespace Collections.Extensions.SlotMap
 
                 _raw = Math.Clamp(value, MIN, MAX);
             }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            internal static KeyTag Convert(uint raw)
-                => (byte)((raw & MASK) >> BITS_SHIFT);
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            internal static uint ClearTag(uint raw)
-                => raw & (~MASK);
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public bool Equals(KeyTag other)
@@ -58,6 +47,10 @@ namespace Collections.Extensions.SlotMap
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public static implicit operator byte(KeyTag value)
                 => value._raw;
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public static implicit operator KeyTag(sbyte value)
+                => new((byte)value);
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public static implicit operator KeyTag(byte value)

@@ -6,15 +6,12 @@ namespace Collections.Extensions.SlotMap
     partial struct SlotMapKey32
     {
         /// <summary>
-        /// Represents a 20 bits index.
+        /// Represents a 16 bits index.
         /// </summary>
         public readonly struct KeyIndex : IEquatable<KeyIndex>, IComparable<KeyIndex>
         {
-            private const uint MASK = 0x_00_0F_FF_FF;
-
-            private const uint INVALID = 0x_00_00_00_00;
-            private const uint MIN     = 0x_00_00_00_01;
-            private const uint MAX     = 0x_00_0F_FF_FF;
+            private const uint MIN = 0x_00_00_00_00;
+            private const uint MAX = 0x_00_00_FF_FF;
 
             public static readonly KeyIndex InvalidValue = default;
             public static readonly KeyIndex MinValue = new(MIN);
@@ -24,20 +21,9 @@ namespace Collections.Extensions.SlotMap
 
             public KeyIndex(uint value)
             {
-                Checks.Require(value != INVALID, $"Index must be greater than or equal to {MIN}");
                 Checks.Suggest(value <= MAX, $"Index should be lesser than or equal to {MAX}");
 
                 _raw = Math.Clamp(value, MIN, MAX);
-            }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            internal static KeyIndex Convert(uint raw)
-                => raw & MASK;
-
-            public bool IsValid
-            {
-                [MethodImpl(MethodImplOptions.AggressiveInlining)]
-                get => _raw != INVALID;
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]

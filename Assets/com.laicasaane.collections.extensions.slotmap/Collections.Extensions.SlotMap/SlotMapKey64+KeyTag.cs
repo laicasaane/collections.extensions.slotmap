@@ -6,15 +6,12 @@ namespace Collections.Extensions.SlotMap
     partial struct SlotMapKey64
     {
         /// <summary>
-        /// Represents a 12 bits tag.
+        /// Represents a 16 bits tag.
         /// </summary>
         public readonly struct KeyTag : IEquatable<KeyTag>, IComparable<KeyTag>
         {
-            private const ulong MASK = 0x_FF_F0_00_00_00_00_00_00;
-            private const int BITS_SHIFT = 52;
-
             private const ushort MIN = 0x_00_00;
-            private const ushort MAX = 0x_0F_FF;
+            private const ushort MAX = 0x_00_FF;
 
             public static readonly KeyTag MinValue = new(MIN);
             public static readonly KeyTag MaxValue = new(MAX);
@@ -27,14 +24,6 @@ namespace Collections.Extensions.SlotMap
 
                 _raw = Math.Clamp(value, MIN, MAX);
             }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            internal static KeyTag Convert(ulong raw)
-                => (ushort)((raw & MASK) >> BITS_SHIFT);
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            internal static ulong ClearTag(ulong raw)
-                => raw & (~MASK);
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public bool Equals(KeyTag other)
@@ -58,6 +47,10 @@ namespace Collections.Extensions.SlotMap
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public static implicit operator ushort(KeyTag value)
                 => value._raw;
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public static implicit operator KeyTag(short value)
+                => new((ushort)value);
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public static implicit operator KeyTag(ushort value)

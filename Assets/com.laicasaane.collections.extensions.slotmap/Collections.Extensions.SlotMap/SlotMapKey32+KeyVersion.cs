@@ -6,24 +6,21 @@ namespace Collections.Extensions.SlotMap
     partial struct SlotMapKey32
     {
         /// <summary>
-        /// Represents a 10 bits version.
+        /// Represents a 8 bits version.
         /// </summary>
         public readonly struct KeyVersion : IEquatable<KeyVersion>, IComparable<KeyVersion>
         {
-            private const uint MASK = 0x_3F_F0_00_00;
-            private const int BITS_SHIFT = 20;
-
-            private const ushort INVALID = 0x_00_00;
-            private const ushort MIN     = 0x_00_01;
-            private const ushort MAX     = 0x_03_FF;
+            private const byte INVALID = 0x_00;
+            private const byte MIN     = 0x_01;
+            private const byte MAX     = 0x_FF;
 
             public static readonly KeyVersion InvalidValue = default;
             public static readonly KeyVersion MinValue = new(MIN);
             public static readonly KeyVersion MaxValue = new(MAX);
 
-            private readonly ushort _raw;
+            private readonly byte _raw;
 
-            public KeyVersion(ushort value)
+            public KeyVersion(byte value)
             {
                 Checks.Require(value != INVALID, $"Version must be greater than or equal to {MIN}");
                 Checks.Suggest(value <= MAX, $"Version should be lesser than or equal to {MAX}");
@@ -31,23 +28,11 @@ namespace Collections.Extensions.SlotMap
                 _raw = Math.Clamp(value, MIN, MAX);
             }
 
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            internal static KeyVersion Convert(uint raw)
-                => (ushort)((raw & MASK) >> BITS_SHIFT);
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            internal static uint ClearVersion(uint raw)
-                => raw & (~MASK);
-
             public bool IsValid
             {
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
                 get => _raw != INVALID;
             }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            internal uint ShiftAndMask()
-                => (uint)(_raw << BITS_SHIFT) & MASK;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public bool Equals(KeyVersion other)
@@ -69,11 +54,15 @@ namespace Collections.Extensions.SlotMap
                 => _raw.ToString();
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public static implicit operator ushort(KeyVersion value)
+            public static implicit operator byte(KeyVersion value)
                 => value._raw;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public static implicit operator KeyVersion(ushort value)
+            public static implicit operator KeyVersion(sbyte value)
+                => new((byte)value);
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public static implicit operator KeyVersion(byte value)
                 => new(value);
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]

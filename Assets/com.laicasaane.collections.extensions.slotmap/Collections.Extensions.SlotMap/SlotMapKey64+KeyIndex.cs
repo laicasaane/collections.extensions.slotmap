@@ -10,34 +10,20 @@ namespace Collections.Extensions.SlotMap
         /// </summary>
         public readonly struct KeyIndex : IEquatable<KeyIndex>, IComparable<KeyIndex>
         {
-            private const ulong MASK = 0x_00_00_00_00_FF_FF_FF_FF;
-
-            private const ulong INVALID = 0x_00_00_00_00_00_00_00_00;
-            private const ulong MIN     = 0x_00_00_00_00_00_00_00_01;
-            private const ulong MAX     = 0x_00_00_00_00_FF_FF_FF_FF;
+            private const uint MIN = 0x_00_00_00_00;
+            private const uint MAX = 0x_FF_FF_FF_FF;
 
             public static readonly KeyIndex InvalidValue = default;
             public static readonly KeyIndex MinValue = new(MIN);
             public static readonly KeyIndex MaxValue = new(MAX);
 
-            private readonly ulong _raw;
+            private readonly uint _raw;
 
-            public KeyIndex(ulong value)
+            public KeyIndex(uint value)
             {
-                Checks.Require(value != INVALID, $"Index must be greater than or equal to {MIN}");
                 Checks.Suggest(value <= MAX, $"Index should be lesser than or equal to {MAX}");
 
                 _raw = Math.Clamp(value, MIN, MAX);
-            }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            internal static KeyIndex Convert(ulong raw)
-                => raw & MASK;
-
-            public bool IsValid
-            {
-                [MethodImpl(MethodImplOptions.AggressiveInlining)]
-                get => _raw != INVALID;
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -65,10 +51,10 @@ namespace Collections.Extensions.SlotMap
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public static implicit operator KeyIndex(int value)
-                => new((ulong)value);
+                => new((uint)value);
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public static implicit operator KeyIndex(ulong value)
+            public static implicit operator KeyIndex(uint value)
                 => new(value);
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
