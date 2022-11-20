@@ -3,23 +3,21 @@ using System.Runtime.CompilerServices;
 
 namespace Collections.Extensions.SlotMap
 {
-    using id_type = UInt32;
-    using version_t = UInt16;
-    using index_t = UInt32;
-    using tag_t = Byte;
-
     /// <summary>
     /// Represents a 32-bit key of the SlotMap32 data structure.
+    /// <para>Components layout:</para>
+    /// <para>1. Tag: 2 bits [0 .. 3]</para>
+    /// <para>2. Version: 10 bits [1 .. 1023]</para>
+    /// <para>3. Index: 20 bits [1 .. 1_048_576]</para>
     /// </summary>
-    public partial struct SlotMapKey32 : IEquatable<SlotMapKey32>
+    /// <remarks>If version or index equals to zero (0), it is invalid.</remarks>
+    public readonly partial struct SlotMapKey32 : IEquatable<SlotMapKey32>
     {
-        private const uint INVALID = 0x_00_00_00_00;
-
-        public static readonly SlotMapKey32 Invalid = default;
+        public static readonly SlotMapKey32 InvalidValue = default;
         public static readonly SlotMapKey32 MinValue = new(KeyIndex.MinValue, KeyVersion.MinValue);
         public static readonly SlotMapKey32 MaxValue = new(KeyIndex.MaxValue, KeyVersion.MaxValue);
 
-        private uint _raw;
+        private readonly uint _raw;
 
         public SlotMapKey32(KeyIndex index, KeyVersion version)
         {
@@ -60,25 +58,31 @@ namespace Collections.Extensions.SlotMap
         public bool IsValid
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get => _raw != INVALID;
+            get
+            {
+                Checks.Require(Index.IsValid, $"`{nameof(Index)}` is invalid");
+                Checks.Require(Version.IsValid, $"`{nameof(Version)}` is invalid");
+
+                return Index.IsValid && Version.IsValid;
+            }
         }
 
         public KeyIndex Index
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get => KeyIndex.ToIndex(_raw);
+            get => KeyIndex.Convert(_raw);
         }
 
         public KeyVersion Version
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get => KeyVersion.ToVersion(_raw);
+            get => KeyVersion.Convert(_raw);
         }
 
         public KeyTag Tag
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get => KeyTag.ToTag(_raw);
+            get => KeyTag.Convert(_raw);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -8,7 +8,7 @@ namespace Collections.Extensions.SlotMap
         /// <summary>
         /// Represents a 2 bits tag.
         /// </summary>
-        public readonly struct KeyTag : IEquatable<KeyTag>
+        public readonly struct KeyTag : IEquatable<KeyTag>, IComparable<KeyTag>
         {
             private const uint MASK = 0x_C0_00_00_00;
             private const int BITS_SHIFT = 30;
@@ -29,8 +29,20 @@ namespace Collections.Extensions.SlotMap
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            internal static KeyTag Convert(uint raw)
+                => (byte)((raw & MASK) >> BITS_SHIFT);
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            internal static uint ClearTag(uint raw)
+                => raw & (~MASK);
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public bool Equals(KeyTag other)
                 => _raw == other._raw;
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public int CompareTo(KeyTag other)
+                => _raw.CompareTo(other._raw);
 
             public override bool Equals(object obj)
                 => obj is KeyTag other && _raw == other._raw;
@@ -42,14 +54,6 @@ namespace Collections.Extensions.SlotMap
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public override string ToString()
                 => _raw.ToString();
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            internal static KeyTag ToTag(uint raw)
-                => (byte)((raw & MASK) >> BITS_SHIFT);
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            internal static uint ClearTag(uint raw)
-                => raw & (~MASK);
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public static implicit operator byte(KeyTag value)
@@ -74,14 +78,6 @@ namespace Collections.Extensions.SlotMap
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public static bool operator >(KeyTag lhs, KeyTag rhs)
                 => lhs._raw > rhs._raw;
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public static bool operator ==(KeyTag lhs, byte rhs)
-                => lhs._raw == rhs;
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public static bool operator !=(KeyTag lhs, byte rhs)
-                => lhs._raw != rhs;
         }
     }
 }

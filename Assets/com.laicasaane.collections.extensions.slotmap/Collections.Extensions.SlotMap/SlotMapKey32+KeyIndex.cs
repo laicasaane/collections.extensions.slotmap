@@ -8,7 +8,7 @@ namespace Collections.Extensions.SlotMap
         /// <summary>
         /// Represents a 20 bits index.
         /// </summary>
-        public readonly struct KeyIndex : IEquatable<KeyIndex>
+        public readonly struct KeyIndex : IEquatable<KeyIndex>, IComparable<KeyIndex>
         {
             private const uint MASK = 0x_00_0F_FF_FF;
 
@@ -29,6 +29,10 @@ namespace Collections.Extensions.SlotMap
 
                 _raw = Math.Clamp(value, MIN, MAX);
             }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            internal static KeyIndex Convert(uint raw)
+                => raw & MASK;
 
             public bool IsValid
             {
@@ -52,8 +56,8 @@ namespace Collections.Extensions.SlotMap
                 => _raw.ToString();
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            internal static KeyIndex ToIndex(uint raw)
-                => raw & MASK;
+            public int CompareTo(KeyIndex other)
+                => _raw.CompareTo(other._raw);
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public static implicit operator uint(KeyIndex value)
@@ -82,22 +86,6 @@ namespace Collections.Extensions.SlotMap
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public static bool operator >(KeyIndex lhs, KeyIndex rhs)
                 => lhs._raw > rhs._raw;
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public static bool operator ==(KeyIndex lhs, uint rhs)
-                => lhs._raw == rhs;
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public static bool operator !=(KeyIndex lhs, uint rhs)
-                => lhs._raw != rhs;
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public static bool operator <(KeyIndex lhs, uint rhs)
-                => lhs._raw < rhs;
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public static bool operator >(KeyIndex lhs, uint rhs)
-                => lhs._raw > rhs;
         }
     }
 }

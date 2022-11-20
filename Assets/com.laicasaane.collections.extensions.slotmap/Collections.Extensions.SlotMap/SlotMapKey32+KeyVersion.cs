@@ -8,7 +8,7 @@ namespace Collections.Extensions.SlotMap
         /// <summary>
         /// Represents a 10 bits version.
         /// </summary>
-        public readonly struct KeyVersion : IEquatable<KeyVersion>
+        public readonly struct KeyVersion : IEquatable<KeyVersion>, IComparable<KeyVersion>
         {
             private const uint MASK = 0x_3F_F0_00_00;
             private const int BITS_SHIFT = 20;
@@ -31,6 +31,14 @@ namespace Collections.Extensions.SlotMap
                 _raw = Math.Clamp(value, MIN, MAX);
             }
 
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            internal static KeyVersion Convert(uint raw)
+                => (ushort)((raw & MASK) >> BITS_SHIFT);
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            internal static uint ClearVersion(uint raw)
+                => raw & (~MASK);
+
             public bool IsValid
             {
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -45,6 +53,10 @@ namespace Collections.Extensions.SlotMap
             public bool Equals(KeyVersion other)
                 => _raw == other._raw;
 
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public int CompareTo(KeyVersion other)
+                => _raw.CompareTo(other._raw);
+
             public override bool Equals(object obj)
                 => obj is KeyVersion other && _raw == other._raw;
 
@@ -55,14 +67,6 @@ namespace Collections.Extensions.SlotMap
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public override string ToString()
                 => _raw.ToString();
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            internal static KeyVersion ToVersion(uint raw)
-                => (ushort)((raw & MASK) >> BITS_SHIFT);
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            internal static uint ClearVersion(uint raw)
-                => raw & (~MASK);
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public static implicit operator ushort(KeyVersion value)
@@ -87,22 +91,6 @@ namespace Collections.Extensions.SlotMap
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public static bool operator >(KeyVersion lhs, KeyVersion rhs)
                 => lhs._raw > rhs._raw;
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public static bool operator ==(KeyVersion lhs, ushort rhs)
-                => lhs._raw == rhs;
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public static bool operator !=(KeyVersion lhs, ushort rhs)
-                => lhs._raw != rhs;
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public static bool operator <(KeyVersion lhs, ushort rhs)
-                => lhs._raw < rhs;
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public static bool operator >(KeyVersion lhs, ushort rhs)
-                => lhs._raw > rhs;
         }
     }
 }
