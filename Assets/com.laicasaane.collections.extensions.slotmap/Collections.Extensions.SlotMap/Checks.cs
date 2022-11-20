@@ -1,5 +1,5 @@
 ﻿#if UNITY_2021_1_OR_NEWER
-#define UNITY_ENGINE
+#define __UNITY_ENGINE__
 #endif
 
 using System;
@@ -31,7 +31,7 @@ namespace Collections.Extensions.SlotMap
 #endif
         public static void Suggest(bool assertion, string message)
         {
-#if UNITY_ENGINE
+#if __UNITY_ENGINE__
             if (assertion == false)
                 UnityEngine.Debug.LogWarning(message);
 #else
