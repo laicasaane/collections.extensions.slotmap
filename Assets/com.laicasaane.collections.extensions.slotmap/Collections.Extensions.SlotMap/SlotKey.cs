@@ -21,40 +21,40 @@ namespace Collections.Extensions.SlotMap
         [FieldOffset(0)]
         private readonly uint _index;
 
-        [FieldOffset(8)]
+        [FieldOffset(4)]
         private readonly SlotVersion _version;
 
-        [FieldOffset(12)]
+        [FieldOffset(6)]
         private readonly ushort _tag;
 
         public SlotKey(uint index) : this()
         {
-            _version = SlotVersion.MinValue;
             _index = index;
+            _version = SlotVersion.MinValue;
         }
 
         public SlotKey(uint index, ushort tag) : this()
         {
-            _tag = tag;
-            _version = SlotVersion.MinValue;
             _index = index;
+            _version = SlotVersion.MinValue;
+            _tag = tag;
         }
 
         public SlotKey(uint index, SlotVersion version) : this()
         {
             Checks.Require(version.IsValid, $"`{nameof(version)}` is invalid");
 
-            _version = version;
             _index = index;
+            _version = version;
         }
 
         public SlotKey(uint index, SlotVersion version, ushort tag) : this()
         {
             Checks.Require(version.IsValid, $"`{nameof(version)}` is invalid");
 
-            _tag = tag;
-            _version = version;
             _index = index;
+            _version = version;
+            _tag = tag;
         }
 
         public ulong Raw
