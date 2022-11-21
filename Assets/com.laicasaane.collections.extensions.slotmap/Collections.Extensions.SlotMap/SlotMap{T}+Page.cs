@@ -47,7 +47,7 @@ namespace Collections.Extensions.SlotMap
                 return true;
             }
 
-            public bool TryAdd(uint index, SlotVersion version, T value)
+            public bool TryAdd(uint index, SlotVersion version, T item)
             {
                 ref var currentTombstone = ref _tombstones[index];
 
@@ -66,12 +66,12 @@ namespace Collections.Extensions.SlotMap
                 }
 
                 currentVersion = version;
-                _items[index] = value;
+                _items[index] = item;
                 _count++;
                 return true;
             }
 
-            public bool TryReplace(uint index, SlotVersion version, T value, out SlotVersion newVersion)
+            public bool TryReplace(uint index, SlotVersion version, T item, out SlotVersion newVersion)
             {
                 ref var currentTombstone = ref _tombstones[index];
 
@@ -92,7 +92,7 @@ namespace Collections.Extensions.SlotMap
                 }
 
                 currentVersion = newVersion = version + 1;
-                _items[index] = value;
+                _items[index] = item;
                 return true;
             }
 

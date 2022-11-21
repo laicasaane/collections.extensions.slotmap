@@ -40,7 +40,7 @@ namespace Collections.Extensions.SlotMap
                 return item;
             }
 
-            throw new InvalidOperationException($"Cannot get item from {s_name}.");
+            throw new SlotMapException($"Cannot get item from {s_name}.");
         }
 
         public bool TryGet(SlotKey key, out T item)
@@ -56,7 +56,7 @@ namespace Collections.Extensions.SlotMap
                 return key;
             }
 
-            throw new InvalidOperationException($"Cannot add item to {s_name}.");
+            throw new SlotMapException($"Cannot add item to {s_name}.");
         }
 
         public bool TryAdd(T item, out SlotKey key)
@@ -69,6 +69,32 @@ namespace Collections.Extensions.SlotMap
 
             ref var page = ref _pages[address.PageIndex];
             return page.TryAdd(address.ItemIndex, key.Version, item);
+        }
+
+        public SlotKey Replace(SlotKey key, T item)
+        {
+            ref var page = ref GetPage(_pages, _pageSize, key, out var itemIndex);
+
+            if (page.TryReplace(itemIndex, key.Version, item, out var newVersion))
+            {
+                return key.WithVersion(newVersion);
+            }
+
+            throw new SlotMapException($"Cannot replace item in {s_name}.");
+        }
+
+        public bool TryReplace(SlotKey key, T item, out SlotKey newKey)
+        {
+            ref var page = ref GetPage(_pages, _pageSize, key, out var itemIndex);
+
+            if (page.TryReplace(itemIndex, key.Version, item, out var newVersion))
+            {
+                newKey = key.WithVersion(newVersion);
+                return true;
+            }
+
+            newKey = key;
+            return false;
         }
 
         public bool Remove(SlotKey key)
