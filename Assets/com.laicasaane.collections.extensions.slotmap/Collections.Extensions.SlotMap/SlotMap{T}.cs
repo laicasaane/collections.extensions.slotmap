@@ -29,6 +29,14 @@ namespace Collections.Extensions.SlotMap
             MakeNewPage();
         }
 
+        public SlotKey Add(T item)
+        {
+            if (TryAdd(item, out var key))
+                return key;
+
+            return default;
+        }
+
         public bool TryAdd(T item, out SlotKey key)
         {
             if (TryMakeNewKey(out key, out var address) == false)
@@ -39,6 +47,15 @@ namespace Collections.Extensions.SlotMap
 
             _pages[address.PageIndex].Add(address.ItemIndex, item);
             return true;
+        }
+
+        public bool Remove(SlotKey key)
+        {
+            Checks.Require(key.IsValid, $"`{nameof(key)}` is invalid");
+
+            var address = GetAddress(key.Index, _pageSize);
+
+            return false;
         }
 
         private bool TryMakeNewKey(out SlotKey key, out Address address)
