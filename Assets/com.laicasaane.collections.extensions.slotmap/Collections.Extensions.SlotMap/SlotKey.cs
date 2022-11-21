@@ -42,7 +42,7 @@ namespace Collections.Extensions.SlotMap
 
         public SlotKey(uint index, SlotVersion version) : this()
         {
-            Checks.Require(version.IsValid, $"`{nameof(version)}` is invalid");
+            Checks.Require(version.IsValid, $"`{nameof(version)}` is invalid.");
 
             _index = index;
             _version = version;
@@ -50,7 +50,7 @@ namespace Collections.Extensions.SlotMap
 
         public SlotKey(uint index, SlotVersion version, ushort tag) : this()
         {
-            Checks.Require(version.IsValid, $"`{nameof(version)}` is invalid");
+            Checks.Require(version.IsValid, $"`{nameof(version)}` is invalid.");
 
             _index = index;
             _version = version;
@@ -95,7 +95,7 @@ namespace Collections.Extensions.SlotMap
 #endif
         public SlotKey WithVersion(SlotVersion version)
         {
-            Checks.Require(version.IsValid, $"`{nameof(version)}` is invalid");
+            Checks.Require(version.IsValid, $"`{nameof(version)}` is invalid.");
 
             return new(_index, version, _tag);
         }

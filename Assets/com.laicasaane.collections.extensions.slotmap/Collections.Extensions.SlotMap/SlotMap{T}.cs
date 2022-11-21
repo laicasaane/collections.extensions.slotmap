@@ -7,6 +7,8 @@ namespace Collections.Extensions.SlotMap
     public partial class SlotMap<T>
     {
         private static readonly string s_name = $"{nameof(SlotMap<T>)}<{typeof(T).Name}>";
+        private static readonly bool s_itemIsUnmanaged = RuntimeHelpers.IsReferenceOrContainsReferences<T>();
+
         private const uint MAX_VALID_INDEX = uint.MaxValue;
 
         private readonly uint _pageSize;
@@ -29,50 +31,77 @@ namespace Collections.Extensions.SlotMap
             MakeNewPage();
         }
 
+        public T Get(SlotKey key)
+        {
+            ref var page = ref GetPage(_pages, _pageSize, key, out var itemIndex);
+
+            if (page.TryGet(itemIndex, key.Version, out var item))
+            {
+                return item;
+            }
+
+            throw new InvalidOperationException($"Cannot get item from {s_name}.");
+        }
+
+        public bool TryGet(SlotKey key, out T item)
+        {
+            ref var page = ref GetPage(_pages, _pageSize, key, out var itemIndex);
+            return page.TryGet(itemIndex, key.Version, out item);
+        }
+
         public SlotKey Add(T item)
         {
             if (TryAdd(item, out var key))
+            {
                 return key;
+            }
 
-            return default;
+            throw new InvalidOperationException($"Cannot add item to {s_name}.");
         }
 
         public bool TryAdd(T item, out SlotKey key)
         {
-            if (TryMakeNewKey(out key, out var address) == false)
+            if (TryGetNewKey(out key, out var address) == false)
             {
-                Checks.Suggest(false, $"Cannot add more item to {s_name}>");
+                Checks.Suggest(false, $"Cannot add more item to {s_name}>.");
                 return false;
             }
 
-            _pages[address.PageIndex].Add(address.ItemIndex, item);
-            return true;
+            ref var page = ref _pages[address.PageIndex];
+            return page.TryAdd(address.ItemIndex, key.Version, item);
         }
 
         public bool Remove(SlotKey key)
         {
-            Checks.Require(key.IsValid, $"`{nameof(key)}` is invalid");
+            ref var page = ref GetPage(_pages, _pageSize, key, out var itemIndex);
+            var result = page.TryRemove(itemIndex, key.Version);
 
-            var address = GetAddress(key.Index, _pageSize);
+            if (result && key.Version < SlotVersion.MaxValue)
+            {
+                _freeKeys.Enqueue(key);
+            }
 
-            return false;
+            return result;
         }
 
-        private bool TryMakeNewKey(out SlotKey key, out Address address)
+        private bool TryGetNewKey(out SlotKey key, out Address address)
         {
             var freeKeys = _freeKeys;
 
             if (freeKeys.Count <= _freeIndicesLimit)
             {
-                key = freeKeys.Dequeue();
-                address = GetAddress(key.Index, _pageSize);
+                var oldKey = freeKeys.Dequeue();
+                key = oldKey.WithVersion(oldKey.Version + 1);
+                address = Address.FromIndex(key.Index, _pageSize);
                 return true;
             }
 
             var pages = _pages;
             var pageCount = (uint)pages.LongLength;
             var lastPageIndex = pageCount - 1;
-            var lastPageCount = pages[lastPageIndex].Count;
+
+            ref var lastPage = ref pages[lastPageIndex];
+            var lastPageCount = lastPage.Count;
 
             if (lastPageCount >= _pageSize)
             {
@@ -90,7 +119,7 @@ namespace Collections.Extensions.SlotMap
             }
 
             address = new(lastPageIndex, lastPageCount);
-            key = new SlotKey(ToIndex(address, _pageSize));
+            key = new SlotKey(address.ToIndex(_pageSize));
             return true;
         }
 
@@ -115,24 +144,23 @@ namespace Collections.Extensions.SlotMap
             newPages[oldLength] = new Page(_pageSize);
             _pages = newPages;
 
-            if (oldLength > 0)
+            if (s_itemIsUnmanaged && oldLength > 0)
             {
                 Array.Clear(oldPages, 0, oldLength);
             }
         }
 
-        private void DeletePage(uint pageIndex)
+        private static ref Page GetPage(Page[] pages, uint pageSize, SlotKey key, out uint itemIndex)
         {
-            var oldPages = _pages;
-            var oldLength = oldPages.Length;
+            Checks.Require(key.IsValid, $"`{nameof(key)}` is invalid.");
 
-            if (oldLength < 1)
-            {
-                Checks.Suggest(false, $"Cannot delete page from SlotMap: 0 page count.");
-                return;
-            }
+            var address = Address.FromIndex(key.Index, pageSize);
+            var pageCount = (uint)pages.LongLength;
 
+            Checks.Require(address.PageIndex < pageCount, $"`{nameof(key)}.{nameof(SlotKey.Index)}` is out of range. Argument value: {key.Index}.");
 
+            itemIndex = address.ItemIndex;
+            return ref pages[address.PageIndex];
         }
 
         private static uint GetMaxPageCount(uint maxIndex, uint pageSize)
@@ -144,13 +172,5 @@ namespace Collections.Extensions.SlotMap
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static bool IsPowerOfTwo(uint x)
             => (x != 0) && ((x & (x - 1)) == 0);
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static Address GetAddress(uint index, uint pageSize)
-            => new(index / pageSize, index % pageSize);
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static uint ToIndex(Address address, uint pageSize)
-            => (address.PageIndex * pageSize) + address.ItemIndex;
     }
 }

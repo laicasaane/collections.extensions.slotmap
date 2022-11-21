@@ -1,4 +1,6 @@
-﻿namespace Collections.Extensions.SlotMap
+﻿using System.Runtime.CompilerServices;
+
+namespace Collections.Extensions.SlotMap
 {
     partial class SlotMap<T>
     {
@@ -9,15 +11,24 @@
 
             public Address(uint pageIndex, uint itemIndex)
             {
-                PageIndex = pageIndex;
-                ItemIndex = itemIndex;
+                this.PageIndex = pageIndex;
+                this.ItemIndex = itemIndex;
             }
 
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void Deconstruct(out uint pageIndex, out uint itemIndex)
             {
-                pageIndex = PageIndex;
-                itemIndex = ItemIndex;
+                pageIndex = this.PageIndex;
+                itemIndex = this.ItemIndex;
             }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public uint ToIndex(uint pageSize)
+                => (this.PageIndex * pageSize) + this.ItemIndex;
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public static Address FromIndex(uint index, uint pageSize)
+                => new(index / pageSize, index % pageSize);
         }
     }
 }
