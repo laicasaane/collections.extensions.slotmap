@@ -122,6 +122,8 @@ namespace Collections.Extensions.SlotMap
         public override int GetHashCode()
             => _raw.GetHashCode();
 
+        public override string ToString()
+            => $"({_index}, {_version}, {_tag})";
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static implicit operator ulong(SlotKey value)
             => value._raw;
