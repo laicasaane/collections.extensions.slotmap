@@ -7,6 +7,9 @@ namespace Collections.Extensions.SlotMap
     [StructLayout(LayoutKind.Explicit)]
     public readonly struct SlotAddress : IEquatable<SlotAddress>
     {
+        public static readonly SlotAddress MinValue = new(uint.MinValue, uint.MinValue);
+        public static readonly SlotAddress MaxValue = new(uint.MaxValue, uint.MaxValue);
+
         [FieldOffset(0)]
         private readonly ulong _raw;
 
