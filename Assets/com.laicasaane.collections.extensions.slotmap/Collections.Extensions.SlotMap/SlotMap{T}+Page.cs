@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
-using static UnityEditor.Progress;
 
 namespace Collections.Extensions.SlotMap
 {
