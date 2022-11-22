@@ -124,6 +124,48 @@ namespace Collections.Extensions.SlotMap
 
         public override string ToString()
             => $"({_index}, {_version}, {_tag})";
+
+        public bool TryFormat(Span<char> destination, out int charsWritten, ReadOnlySpan<char> format = default, IFormatProvider provider = null)
+        {
+            var openQuoteCharsWritten = 0;
+            destination[openQuoteCharsWritten++] = '(';
+
+            destination = destination[openQuoteCharsWritten..];
+
+            if (_index.TryFormat(destination, out var indexCharsWritten, format, provider) == false)
+            {
+                charsWritten = 0;
+                return false;
+            }
+
+            destination[indexCharsWritten++] = ',';
+            destination[indexCharsWritten++] = ' ';
+
+            destination = destination[indexCharsWritten..];
+
+            if (_version.TryFormat(destination, out var versionCharsWritten, format, provider) == false)
+            {
+                charsWritten = 0;
+                return false;
+            }
+
+            destination[versionCharsWritten++] = ',';
+            destination[versionCharsWritten++] = ' ';
+
+            destination = destination[versionCharsWritten..];
+
+            if (_tag.TryFormat(destination, out var tagCharsWritten, format, provider) == false)
+            {
+                charsWritten = 0;
+                return false;
+            }
+
+            destination[tagCharsWritten++] = ')';
+
+            charsWritten = openQuoteCharsWritten + indexCharsWritten + versionCharsWritten + tagCharsWritten;
+            return true;
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static implicit operator ulong(SlotKey value)
             => value._raw;

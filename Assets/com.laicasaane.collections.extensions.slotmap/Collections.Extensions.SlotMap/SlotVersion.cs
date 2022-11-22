@@ -69,6 +69,9 @@ namespace Collections.Extensions.SlotMap
         public ulong ToUInt64()
             => _raw;
 
+        public bool TryFormat(Span<char> destination, out int charsWritten, ReadOnlySpan<char> format = default, IFormatProvider provider = null)
+            => _raw.TryFormat(destination, out charsWritten, format, provider);
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static implicit operator ushort(SlotVersion value)
             => value._raw;
