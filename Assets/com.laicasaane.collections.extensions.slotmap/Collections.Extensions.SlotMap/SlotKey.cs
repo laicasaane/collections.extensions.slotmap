@@ -19,13 +19,13 @@ namespace Collections.Extensions.SlotMap
         private readonly ulong _raw;
 
         [FieldOffset(0)]
-        private readonly uint _index;
+        private readonly ushort _tag;
 
-        [FieldOffset(4)]
+        [FieldOffset(2)]
         private readonly SlotVersion _version;
 
-        [FieldOffset(6)]
-        private readonly ushort _tag;
+        [FieldOffset(4)]
+        private readonly uint _index;
 
         public SlotKey(uint index) : this()
         {

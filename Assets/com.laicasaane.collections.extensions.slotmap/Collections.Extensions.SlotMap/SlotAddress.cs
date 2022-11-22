@@ -11,10 +11,10 @@ namespace Collections.Extensions.SlotMap
         private readonly ulong _raw;
 
         [FieldOffset(0)]
-        private readonly uint _pageIndex;
+        private readonly uint _itemIndex;
 
         [FieldOffset(4)]
-        private readonly uint _itemIndex;
+        private readonly uint _pageIndex;
 
         public SlotAddress(uint pageIndex, uint itemIndex) : this()
         {
@@ -51,10 +51,10 @@ namespace Collections.Extensions.SlotMap
             => $"({_pageIndex}, {_itemIndex})";
 
         public bool Equals(SlotAddress other)
-            => _pageIndex == other._pageIndex && _itemIndex == other._itemIndex;
+            => _raw == other._raw;
 
         public override bool Equals(object obj)
-            => obj is SlotAddress other && _pageIndex == other._pageIndex && _itemIndex == other._itemIndex;
+            => obj is SlotAddress other && _raw == other._raw;
 
         public override int GetHashCode()
             => _raw.GetHashCode();
@@ -96,5 +96,25 @@ namespace Collections.Extensions.SlotMap
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static SlotAddress FromIndex(uint index, uint pageSize)
             => new(index / pageSize, index % pageSize);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static implicit operator ulong(SlotAddress value)
+            => value._raw;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool operator ==(SlotAddress lhs, SlotAddress rhs)
+            => lhs._raw == rhs._raw;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool operator !=(SlotAddress lhs, SlotAddress rhs)
+            => lhs._raw != rhs._raw;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool operator <(SlotAddress lhs, SlotAddress rhs)
+            => lhs._raw < rhs._raw;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool operator >(SlotAddress lhs, SlotAddress rhs)
+            => lhs._raw > rhs._raw;
     }
 }
