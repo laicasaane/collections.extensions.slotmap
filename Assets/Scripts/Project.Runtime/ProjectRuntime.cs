@@ -27,9 +27,27 @@ namespace Project.Runtime
                 Debug.Log($"{key} = {key.Raw} :: {address} = {address.Raw}");
             }
 
-            var xAdd = new SlotAddress(uint.MaxValue, uint.MaxValue);
-            Debug.Log($"{xAdd} = {xAdd.Raw}");
-            Debug.Log(ulong.MaxValue);
+            const int RANDOM_MAX_INDEX = 15;
+            var randomKeys = new SlotKey[RANDOM_MAX_INDEX + 1];
+
+            foreach (var i in 0..RANDOM_MAX_INDEX)
+            {
+                var randomIndex = UnityEngine.Random.Range(0, MAX_INDEX);
+                var randomKey = slotkeys[randomIndex];
+                randomKeys[i] = randomKey;
+
+                if (slotmap.Remove(randomKey))
+                {
+                    Debug.Log($"Remove {randomKey}");
+                }
+            }
+
+            foreach (var i in 0..RANDOM_MAX_INDEX)
+            {
+                var randomKey = randomKeys[i];
+
+                Debug.Log($"Contains `{randomKey}` = {slotmap.Contains(randomKey)}");
+            }
         }
     }
 

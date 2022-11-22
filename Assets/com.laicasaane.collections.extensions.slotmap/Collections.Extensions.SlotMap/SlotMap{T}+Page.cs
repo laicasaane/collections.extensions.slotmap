@@ -9,159 +9,245 @@ namespace Collections.Extensions.SlotMap
         {
             private uint _count;
 
-            private readonly SlotVersion[] _versions;
             private readonly bool[] _tombstones;
+            private readonly bool[] _occupied;
+            private readonly SlotVersion[] _versions;
             private readonly T[] _items;
 
             public Page(uint size)
             {
-                _versions = new SlotVersion[size];
                 _tombstones= new bool[size];
+                _occupied = new bool[size];
+                _versions = new SlotVersion[size];
                 _items = new T[size];
                 _count = 0;
             }
 
             public uint Count => _count;
 
-            public T Get(uint index, SlotVersion version)
+            public ref T GetRef(uint index, SlotKey key)
             {
-                ref var currentTombstone = ref _tombstones[index];
-
-                Checks.Require(currentTombstone == false, $"Cannot get item because `key` is pointing to a dead slot.");
-
-                ref var currentVersion = ref _versions[index];
-
-                Checks.Require(currentVersion == version, $"Cannot get item because " +
-                    $"`key.{nameof(SlotKey.Version)}` is different from the current version. " +
-                    $"Argument value: {version}. Current value: {currentVersion}."
+                Checks.Require(_tombstones[index] == false
+                    , $"Cannot get item because `key` is pointing to a dead slot. "
+                    + $"Key value: {key}."
                 );
 
-                return _items[index];
-            }
+                Checks.Require(_occupied[index] == true
+                    , $"Cannot get item because `key` is pointing to an empty slot. "
+                    + $"Key value: {key}."
+                );
 
-            public ref readonly T GetRef(uint index, SlotVersion version)
-            {
-                ref var currentTombstone = ref _tombstones[index];
+                var currentVersion = _versions[index];
 
-                Checks.Require(currentTombstone == false, $"Cannot get item because `key` is pointing to a dead slot.");
-
-                ref var currentVersion = ref _versions[index];
-
-                Checks.Require(currentVersion == version, $"Cannot get item because " +
-                    $"`key.{nameof(SlotKey.Version)}` is different from the current version. " +
-                    $"Argument value: {version}. Current value: {currentVersion}."
+                Checks.Require(currentVersion == key.Version
+                    , $"Cannot get item because `key.{nameof(SlotKey.Version)}` "
+                    + $"is different from the current version. "
+                    + $"Key value: {key}. Current version: {currentVersion}. "
                 );
 
                 return ref _items[index];
             }
 
-            public bool TryGet(uint index, SlotVersion version, out T item)
+            public ref T GetRefNotThrow(uint index, SlotKey key)
             {
-                ref var currentTombstone = ref _tombstones[index];
-
-                if (currentTombstone == true)
+                if (_tombstones[index] == true)
                 {
-                    Checks.Suggest(false, $"Cannot get item because `key` is pointing to a dead slot.");
-                    item = default;
-                    return false;
-                }
-
-                ref var currentVersion = ref _versions[index];
-
-                if (currentVersion != version)
-                {
-                    Checks.Suggest(false, $"Cannot get item because " +
-                        $"`key.{nameof(SlotKey.Version)}` is different from the current version. " +
-                        $"Argument value: {version}. Current value: {currentVersion}."
+                    Checks.Suggest(false
+                        , $"Cannot get item because `key` is pointing to a dead slot. "
+                        + $"Key value: {key}."
                     );
 
-                    item = default;
+                    return ref Unsafe.NullRef<T>();
+                }
+
+                if (_occupied[index] == false)
+                {
+                    Checks.Suggest(false
+                        , $"Cannot get item because `key` is pointing to an empty slot. "
+                        + $"Key value: {key}."
+                    );
+
+                    return ref Unsafe.NullRef<T>();
+                }
+
+                var currentVersion = _versions[index];
+
+                if (currentVersion != key.Version)
+                {
+                    Checks.Suggest(false
+                        , $"Cannot get item because `key.{nameof(SlotKey.Version)}` "
+                        + $"is different from the current version. "
+                        + $"Key value: {key}. Current version: {currentVersion}."
+                    );
+
+                    return ref Unsafe.NullRef<T>();
+                }
+
+                return ref _items[index];
+            }
+
+            public void Add(uint index, SlotKey key, T item)
+            {
+                Checks.Require(_tombstones[index] == false
+                    , $"Cannot add item because `key` is pointing to a dead slot. "
+                    + $"Key value: {key}."
+                );
+
+                ref var currentOccupied = ref _occupied[index];
+
+                Checks.Require(currentOccupied == false
+                    , $"Cannot add item because `key` is pointing to an occupied slot. "
+                    + $"Key value: {key}."
+                );
+
+                ref var currentVersion = ref _versions[index];
+                var version = key.Version;
+
+                Checks.Require(currentVersion < version
+                    , $"Cannot add item because `key.{nameof(SlotKey.Version)}` "
+                    + $"is lesser than or equal to the current version. "
+                    + $"Key value: {key}. Current version: {currentVersion}."
+                );
+
+                _items[index] = item;
+                _count++;
+
+                currentOccupied = true;
+                currentVersion = version;
+            }
+
+            public bool TryAdd(uint index, SlotKey key, T item)
+            {
+                if (_tombstones[index] == true)
+                {
+                    Checks.Suggest(false
+                        , $"Cannot add item because `key` is pointing to a dead slot. "
+                        + $"Key value: {key}."
+                    );
+
                     return false;
                 }
 
-                item = _items[index];
-                return true;
-            }
+                ref var currentOccupied = ref _occupied[index];
 
-            public bool TryAdd(uint index, SlotVersion version, T item)
-            {
-                ref var currentTombstone = ref _tombstones[index];
-
-                if (currentTombstone == true)
+                if (currentOccupied == true)
                 {
-                    Checks.Suggest(false, $"Cannot add item because `key` is pointing to a dead slot.");
+                    Checks.Suggest(false
+                        , $"Cannot add item because `key` is pointing to an occupied slot. "
+                        + $"Key value: {key}."
+                    );
+
                     return false;
                 }
 
                 ref var currentVersion = ref _versions[index];
+                var version = key.Version;
 
                 if (currentVersion >= version)
                 {
-                    Checks.Suggest(false, $"Cannot add item because " +
-                        $"`key.{nameof(SlotKey.Version)}` is lesser than or equal to the current version. " +
-                        $"Argument value: {version}. Current value: {currentVersion}."
+                    Checks.Suggest(false
+                        , $"Cannot add item because `key.{nameof(SlotKey.Version)}` "
+                        + $"is lesser than or equal to the current version. "
+                        + $"Key value: {key}. Current version: {currentVersion}."
                     );
 
                     return false;
                 }
 
-                currentVersion = version;
                 _items[index] = item;
                 _count++;
+
+                currentOccupied = true;
+                currentVersion = version;
                 return true;
             }
 
-            public bool TryReplace(uint index, SlotVersion version, T item, out SlotVersion newVersion)
+            public bool TryReplace(uint index, SlotKey key, T item, out SlotKey newKey)
             {
-                ref var currentTombstone = ref _tombstones[index];
-
-                if (currentTombstone == true)
+                if (_tombstones[index] == true)
                 {
-                    Checks.Suggest(false, $"Cannot replace item because `key` is pointing to a dead slot.");
-                    newVersion = default;
+                    Checks.Suggest(false
+                        , $"Cannot replace item because `key` is pointing to a dead slot. "
+                        + $"Key value: {key}."
+                    );
+
+                    newKey = default;
+                    return false;
+                }
+
+                if (_occupied[index] == false)
+                {
+                    Checks.Suggest(false
+                        , $"Cannot replace item because `key` is pointing to an empty slot. "
+                        + $"Key value: {key}."
+                    );
+
+                    newKey = default;
                     return false;
                 }
 
                 ref var currentVersion = ref _versions[index];
+                var version = key.Version;
 
                 if (currentVersion != version)
                 {
-                    Checks.Suggest(false, $"Cannot add item because " +
-                        $"`key.{nameof(SlotKey.Version)}` is different from the current version. " +
-                        $"Argument value: {version}. Current value: {currentVersion}."
+                    Checks.Suggest(false
+                        , $"Cannot add item because `key.{nameof(SlotKey.Version)}` "
+                        + $"is different from the current version. "
+                        + $"Key value: {key}. Current version: {currentVersion}."
                     );
 
-                    newVersion = default;
+                    newKey = default;
                     return false;
                 }
 
-                currentVersion = newVersion = version + 1;
                 _items[index] = item;
+                currentVersion = version + 1;
+                newKey = key.WithVersion(currentVersion);
                 return true;
             }
 
-            public bool TryRemove(uint index, SlotVersion version)
+            public bool TryRemove(uint index, SlotKey key)
             {
                 ref var currentTombstone = ref _tombstones[index];
 
                 if (currentTombstone == true)
                 {
+                    Checks.Suggest(false
+                        , $"Cannot remove item because `{nameof(key)}` is pointing to a dead slot. "
+                        + $"Key value: {key}."
+                    );
+
                     return true;
                 }
 
-                ref var currentVersion = ref _versions[index];
+                ref var currentOccupied = ref _occupied[index];
 
-                if (currentVersion != version)
+                if (currentOccupied == false)
                 {
-                    Checks.Suggest(false, $"Cannot remove item because the " +
-                        $"`key.{nameof(SlotKey.Version)}` is different from the current version. " +
-                        $"Argument value: {version}. Current value: {currentVersion}."
+                    Checks.Suggest(false
+                        , $"Cannot remove item because `{nameof(key)}` is pointing to an empty slot. "
+                        + $"Key value: {key}."
+                    );
+
+                    return false;
+                }
+
+                var currentVersion = _versions[index];
+
+                if (currentVersion != key.Version)
+                {
+                    Checks.Suggest(false
+                        , $"Cannot remove item because the  `key.{nameof(SlotKey.Version)}` "
+                        + $"is different from the current version. "
+                        + $"Key value: {key}. Current version: {currentVersion}."
                     );
 
                     return false;
                 }
 
                 _items[index] = default;
+                currentOccupied = false;
 
                 if (currentVersion < SlotVersion.MaxValue)
                 {
@@ -176,10 +262,17 @@ namespace Collections.Extensions.SlotMap
                 return true;
             }
 
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public bool Contains(uint index, SlotKey key)
+                => _tombstones[index] == false
+                && _occupied[index] == true 
+                && _versions[index] == key.Version;
+
             public void Clear()
             {
-                Array.Clear(_versions, 0, _versions.Length);
                 Array.Clear(_tombstones, 0, _tombstones.Length);
+                Array.Clear(_occupied, 0, _occupied.Length);
+                Array.Clear(_versions, 0, _versions.Length);
 
                 ClearItems();
             }

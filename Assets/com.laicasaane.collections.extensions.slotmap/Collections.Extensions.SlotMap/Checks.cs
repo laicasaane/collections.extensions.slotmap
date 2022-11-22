@@ -36,7 +36,45 @@ namespace Collections.Extensions.SlotMap
                 UnityEngine.Debug.LogWarning(message);
 #else
             if (assertion == false)
-                throw new SlotMapException(message);
+                System.Diagnostics.Debug.WriteLine(message);
+#endif
+        }
+
+#if DISABLE_SLOTMAP_CHECKS
+        [Conditional("__SLOTMAP_CHECKS_NEVER_DEFINED__")]
+#endif
+        public static void RequireOrSuggest(bool required, bool assertion, string message)
+        {
+#if __UNITY_ENGINE__
+            if (assertion == false)
+            {
+                if (required)
+                    throw new SlotMapException(message);
+                else
+                    UnityEngine.Debug.LogWarning(message);
+            }
+#else
+            if (assertion == false)
+                System.Diagnostics.Debug.WriteLine(message);
+#endif
+        }
+
+#if DISABLE_SLOTMAP_CHECKS
+        [Conditional("__SLOTMAP_CHECKS_NEVER_DEFINED__")]
+#endif
+        public static void RequireOrSuggest(bool required, bool assertion, string message, System.Exception inner)
+        {
+#if __UNITY_ENGINE__
+            if (assertion == false)
+            {
+                if (required)
+                    throw new SlotMapException(message, inner);
+                else
+                    UnityEngine.Debug.LogWarning(message);
+            }
+#else
+            if (assertion == false)
+                System.Diagnostics.Debug.WriteLine(message);
 #endif
         }
     }

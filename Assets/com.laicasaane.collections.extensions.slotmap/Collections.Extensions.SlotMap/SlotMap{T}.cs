@@ -31,15 +31,15 @@ namespace Collections.Extensions.SlotMap
         {
             Checks.Require(
                   IsPowerOfTwo(pageSize)
-                , $"`{nameof(pageSize)}` must be a power of two. Argument value: {pageSize}."
+                , $"`{nameof(pageSize)}` must be a power of two. Page size value: {pageSize}."
             );
 
             Checks.Suggest(
                   freeIndicesLimit <= pageSize
-                , $"`{nameof(freeIndicesLimit)}` should be lesser than " +
-                  $"or equal to `{nameof(pageSize)}: {pageSize}`, " +
-                  $"or it would be clamped to `{nameof(pageSize)}`. " +
-                  $"Argument value: {freeIndicesLimit}."
+                , $"`{nameof(freeIndicesLimit)}` should be lesser than "
+                + $"or equal to `{nameof(pageSize)}: {pageSize}`, "
+                + $"or it would be clamped to `{nameof(pageSize)}`. "
+                + $"Free indices limit value: {freeIndicesLimit}."
             );
 
             _pageSize = pageSize;
@@ -48,7 +48,7 @@ namespace Collections.Extensions.SlotMap
             _count = 0;
             _tombstoneCount = 0;
 
-            MakeNewPage();
+            TryCreatePage();
         }
 
         public uint PageSize
@@ -71,44 +71,83 @@ namespace Collections.Extensions.SlotMap
 
         public T Get(SlotKey key)
         {
-            ref var page = ref GetPage(_pages, _pageSize, key, out var itemIndex);
-            return page.Get(itemIndex, key.Version);
+            if (FindAddress(_pages, _pageSize, key, out var address))
+            {
+                ref var page = ref _pages[address.PageIndex];
+                return page.GetRef(address.ItemIndex, key);
+            }
+
+            throw new SlotMapException($"Cannot find address for `{nameof(key)}`. Key value: {key}.");
         }
 
         public ref readonly T GetRef(SlotKey key)
         {
-            ref var page = ref GetPage(_pages, _pageSize, key, out var itemIndex);
-            return ref page.GetRef(itemIndex, key.Version);
+            if (FindAddress(_pages, _pageSize, key, out var address))
+            {
+                ref var page = ref _pages[address.PageIndex];
+                return ref page.GetRef(address.ItemIndex, key);
+            }
+
+            throw new SlotMapException($"Cannot find address for `{nameof(key)}`. Key value: {key}.");
+        }
+
+        public ref readonly T GetRefNotThrow(SlotKey key)
+        {
+            if (FindAddress(_pages, _pageSize, key, out var address))
+            {
+                ref var page = ref _pages[address.PageIndex];
+                return ref page.GetRefNotThrow(address.ItemIndex, key);
+            }
+
+            return ref Unsafe.NullRef<T>();
         }
 
         public bool TryGet(SlotKey key, out T item)
         {
-            ref var page = ref GetPage(_pages, _pageSize, key, out var itemIndex);
-            return page.TryGet(itemIndex, key.Version, out item);
+            if (FindAddress(_pages, _pageSize, key, out var address) == false)
+            {
+                item = default;
+                return false;
+            }
+
+            ref var page = ref _pages[address.PageIndex];
+            ref var itemRef = ref page.GetRefNotThrow(address.ItemIndex, key);
+
+            if (Unsafe.IsNullRef<T>(ref itemRef))
+            {
+                item = default;
+                return false;
+            }
+
+            item = itemRef;
+            return true;
         }
 
         public SlotKey Add(T item)
         {
-            if (TryAdd(item, out var key))
+            if (TryGetNewKey(out var key, out var address))
             {
+                ref var page = ref _pages[address.PageIndex];
+                page.Add(address.ItemIndex, key, item);
+
                 _count++;
                 return key;
             }
 
-            throw new SlotMapException($"Cannot add `{nameof(item)}` to {s_name}. Argument value: {item}.");
+            throw new SlotMapException($"Cannot add `{nameof(item)}` to {s_name}. Item value: {item}.");
         }
 
         public bool TryAdd(T item, out SlotKey key)
         {
             if (TryGetNewKey(out key, out var address) == false)
             {
-                Checks.Suggest(false, $"Cannot add `{nameof(item)}` to {s_name}. Argument value: {item}.");
+                Checks.Suggest(false, $"Cannot add `{nameof(item)}` to {s_name}. Item value: {item}.");
                 return false;
             }
 
             ref var page = ref _pages[address.PageIndex];
             
-            if (page.TryAdd(address.ItemIndex, key.Version, item))
+            if (page.TryAdd(address.ItemIndex, key, item))
             {
                 _count++;
                 return true;
@@ -119,35 +158,41 @@ namespace Collections.Extensions.SlotMap
 
         public SlotKey Replace(SlotKey key, T item)
         {
-            ref var page = ref GetPage(_pages, _pageSize, key, out var itemIndex);
-
-            if (page.TryReplace(itemIndex, key.Version, item, out var newVersion))
+            if (FindAddress(_pages, _pageSize, key, out var address))
             {
-                return key.WithVersion(newVersion);
+                ref var page = ref _pages[address.PageIndex];
+
+                if (page.TryReplace(address.ItemIndex, key, item, out var newKey))
+                {
+                    return newKey;
+                }
             }
 
-            throw new SlotMapException($"Cannot replace `{nameof(item)}` in {s_name}. Argument value: {item}");
+            throw new SlotMapException($"Cannot replace `{nameof(item)}` in {s_name}. Item value: {item}.");
         }
 
         public bool TryReplace(SlotKey key, T item, out SlotKey newKey)
         {
-            ref var page = ref GetPage(_pages, _pageSize, key, out var itemIndex);
-
-            if (page.TryReplace(itemIndex, key.Version, item, out var newVersion))
+            if (FindAddress(_pages, _pageSize, key, out var address) == false)
             {
-                newKey = key.WithVersion(newVersion);
-                return true;
+                newKey = key;
+                return false;
             }
 
-            newKey = key;
-            return false;
+            ref var page = ref _pages[address.PageIndex];
+            return page.TryReplace(address.ItemIndex, key, item, out newKey);
         }
 
         public bool Remove(SlotKey key)
         {
-            ref var page = ref GetPage(_pages, _pageSize, key, out var itemIndex);
+            if (FindAddress(_pages, _pageSize, key, out var address) == false)
+            {
+                return false;
+            }
 
-            if (page.TryRemove(itemIndex, key.Version) == false)
+            ref var page = ref _pages[address.PageIndex];
+
+            if (page.TryRemove(address.ItemIndex, key) == false)
             {
                 return false;
             }
@@ -164,6 +209,17 @@ namespace Collections.Extensions.SlotMap
             }
 
             return true;
+        }
+
+        public bool Contains(SlotKey key)
+        {
+            if (FindAddress(_pages, _pageSize, key, out var address) == false)
+            {
+                return false;
+            }
+
+            ref var page = ref _pages[address.PageIndex];
+            return page.Contains(address.ItemIndex, key);
         }
 
         public void Clear()
@@ -205,14 +261,12 @@ namespace Collections.Extensions.SlotMap
 
             if (lastPageCount >= pageSize)
             {
-                if (pageCount >= _maxPageCount)
+                if (pageCount >= _maxPageCount || TryCreatePage() == false)
                 {
                     key = default;
                     address = default;
                     return false;
                 }
-
-                MakeNewPage();
 
                 lastPageIndex += 1;
                 lastPageCount = 0;
@@ -223,7 +277,7 @@ namespace Collections.Extensions.SlotMap
             return true;
         }
 
-        private void MakeNewPage()
+        private bool TryCreatePage()
         {
             var oldPages = _pages;
             var oldLength = oldPages.Length;
@@ -231,11 +285,7 @@ namespace Collections.Extensions.SlotMap
 
             if (oldLength >= maxPageCount)
             {
-                Checks.Suggest(false
-                    , $"Cannot add more page to {s_name}: the limit of {maxPageCount} pages has been reached."
-                );
-
-                return;
+                return false;
             }
 
             var newPages = new Page[oldLength + 1];
@@ -252,23 +302,38 @@ namespace Collections.Extensions.SlotMap
             {
                 Array.Clear(oldPages, 0, oldLength);
             }
+
+            return true;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static ref Page GetPage(Page[] pages, uint pageSize, SlotKey key, out uint itemIndex)
+        private static bool FindAddress(
+              Page[] pages, uint pageSize
+            , SlotKey key
+            , out SlotAddress address
+        )
         {
-            Checks.Require(key.IsValid, $"`{nameof(key)}` is invalid.");
+            if (key.IsValid == false)
+            {
+                Checks.Suggest(false, $"`{nameof(key)}` is invalid. Key value: {key}.");
 
-            var address = SlotAddress.FromIndex(key.Index, pageSize);
+                address = default;
+                return false;
+            }
+
+            address = SlotAddress.FromIndex(key.Index, pageSize);
             var pageCount = (uint)pages.Length;
 
-            Checks.Require(
-                  address.PageIndex < pageCount
-                , $"`{nameof(key)}.{nameof(SlotKey.Index)}` is out of range. Argument value: {key.Index}."
-            );
+            if (address.PageIndex >= pageCount)
+            {
+                Checks.Suggest(false
+                    , $"`{nameof(key)}.{nameof(SlotKey.Index)}` is out of range. Key value: {key}."
+                );
 
-            itemIndex = address.ItemIndex;
-            return ref pages[address.PageIndex];
+                address = default;
+                return false;
+            }
+
+            return true;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
