@@ -31,6 +31,10 @@ namespace Collections.Extensions.SlotMap
             MakeNewPage();
         }
 
+        public uint PageSize => _pageSize;
+
+        public uint PageCount => (uint)_pages.LongLength;
+
         public T Get(SlotKey key)
         {
             ref var page = ref GetPage(_pages, _pageSize, key, out var itemIndex);
@@ -110,7 +114,7 @@ namespace Collections.Extensions.SlotMap
             return result;
         }
 
-        private bool TryGetNewKey(out SlotKey key, out Address address)
+        private bool TryGetNewKey(out SlotKey key, out SlotAddress address)
         {
             var pageSize = _pageSize;
             var freeKeys = _freeKeys;
@@ -119,7 +123,7 @@ namespace Collections.Extensions.SlotMap
             {
                 var oldKey = freeKeys.Dequeue();
                 key = oldKey.WithVersion(oldKey.Version + 1).WithTag(default);
-                address = Address.FromIndex(key.Index, pageSize);
+                address = SlotAddress.FromIndex(key.Index, pageSize);
                 return true;
             }
 
@@ -183,7 +187,7 @@ namespace Collections.Extensions.SlotMap
         {
             Checks.Require(key.IsValid, $"`{nameof(key)}` is invalid.");
 
-            var address = Address.FromIndex(key.Index, pageSize);
+            var address = SlotAddress.FromIndex(key.Index, pageSize);
             var pageCount = (uint)pages.LongLength;
 
             Checks.Require(address.PageIndex < pageCount, $"`{nameof(key)}.{nameof(SlotKey.Index)}` is out of range. Argument value: {key.Index}.");
