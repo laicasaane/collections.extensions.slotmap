@@ -2,8 +2,8 @@
     "name": "Project.Runtime",
     "rootNamespace": "Project.Runtime",
     "references": [
-        "Unity.TextMeshPro",
-        "UnityEngine.UI"
+        "UnityEngine.UI",
+        "Collections.Extensions.SlotMap"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
