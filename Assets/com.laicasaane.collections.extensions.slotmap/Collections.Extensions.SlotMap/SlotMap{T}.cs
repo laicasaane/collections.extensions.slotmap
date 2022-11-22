@@ -178,6 +178,7 @@ namespace Collections.Extensions.SlotMap
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static ref Page GetPage(Page[] pages, uint pageSize, SlotKey key, out uint itemIndex)
         {
             Checks.Require(key.IsValid, $"`{nameof(key)}` is invalid.");
@@ -191,6 +192,7 @@ namespace Collections.Extensions.SlotMap
             return ref pages[address.PageIndex];
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static uint GetMaxPageCount(uint maxIndex, uint pageSize)
         {
             var result = maxIndex / pageSize;
