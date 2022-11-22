@@ -17,23 +17,57 @@ namespace Collections.Extensions.SlotMap
 
         private readonly Queue<SlotKey> _freeKeys = new();
 
+        ///***********************************************************************************///
+        /// Because <see cref="PageSize"/> must be a power of two                             ///
+        /// so its minimum value would be 2                                                   ///
+        /// so the maximum length of <see cref="_pages"/> would be <see cref="int.MaxValue"/> ///
+        ///***********************************************************************************///
+
         private Page[] _pages = Array.Empty<Page>();
+        private uint _count;
+        private uint _tombstoneCount;
 
         public SlotMap(uint pageSize = 1024, uint freeIndicesLimit = 32)
         {
-            Checks.Require(IsPowerOfTwo(pageSize), $"`{nameof(pageSize)}` must be a power of two. Argument value: {pageSize}.");
-            Checks.Suggest(freeIndicesLimit <= pageSize, $"`{nameof(freeIndicesLimit)}` should be lesser than or equal to `{nameof(pageSize)}: {pageSize}`, or it would be clamped to `{nameof(pageSize)}`. Argument value: {freeIndicesLimit}.");
+            Checks.Require(
+                  IsPowerOfTwo(pageSize)
+                , $"`{nameof(pageSize)}` must be a power of two. Argument value: {pageSize}."
+            );
+
+            Checks.Suggest(
+                  freeIndicesLimit <= pageSize
+                , $"`{nameof(freeIndicesLimit)}` should be lesser than " +
+                  $"or equal to `{nameof(pageSize)}: {pageSize}`, " +
+                  $"or it would be clamped to `{nameof(pageSize)}`. " +
+                  $"Argument value: {freeIndicesLimit}."
+            );
 
             _pageSize = pageSize;
             _freeIndicesLimit = Math.Clamp(freeIndicesLimit, 0, pageSize);
             _maxPageCount = GetMaxPageCount(MAX_VALID_INDEX, pageSize);
+            _count = 0;
+            _tombstoneCount = 0;
 
             MakeNewPage();
         }
 
-        public uint PageSize => _pageSize;
+        public uint PageSize
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => _pageSize;
+        }
 
-        public uint PageCount => (uint)_pages.LongLength;
+        public uint Count
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => _count;
+        }
+
+        public uint TombstoneCount
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => _tombstoneCount;
+        }
 
         public T Get(SlotKey key)
         {
@@ -57,6 +91,7 @@ namespace Collections.Extensions.SlotMap
         {
             if (TryAdd(item, out var key))
             {
+                _count++;
                 return key;
             }
 
@@ -72,7 +107,14 @@ namespace Collections.Extensions.SlotMap
             }
 
             ref var page = ref _pages[address.PageIndex];
-            return page.TryAdd(address.ItemIndex, key.Version, item);
+            
+            if (page.TryAdd(address.ItemIndex, key.Version, item))
+            {
+                _count++;
+                return true;
+            }
+
+            return false;
         }
 
         public SlotKey Replace(SlotKey key, T item)
@@ -104,14 +146,41 @@ namespace Collections.Extensions.SlotMap
         public bool Remove(SlotKey key)
         {
             ref var page = ref GetPage(_pages, _pageSize, key, out var itemIndex);
-            var result = page.TryRemove(itemIndex, key.Version);
 
-            if (result && key.Version < SlotVersion.MaxValue)
+            if (page.TryRemove(itemIndex, key.Version) == false)
+            {
+                return false;
+            }
+
+            _count--;
+
+            if (key.Version < SlotVersion.MaxValue)
             {
                 _freeKeys.Enqueue(key);
             }
+            else
+            {
+                _tombstoneCount++;
+            }
 
-            return result;
+            return true;
+        }
+
+        public void Clear()
+        {
+            var pages = _pages;
+            var length = (uint)pages.Length;
+
+            if (length > 0)
+            {
+                pages[0].Clear();
+                _pages = new Page[1] {
+                    pages[0]
+                };
+            }
+
+            _count = 0;
+            _tombstoneCount = 0;
         }
 
         private bool TryGetNewKey(out SlotKey key, out SlotAddress address)
@@ -128,7 +197,7 @@ namespace Collections.Extensions.SlotMap
             }
 
             var pages = _pages;
-            var pageCount = (uint)pages.LongLength;
+            var pageCount = (uint)pages.Length;
             var lastPageIndex = pageCount - 1;
 
             ref var lastPage = ref pages[lastPageIndex];
@@ -162,7 +231,10 @@ namespace Collections.Extensions.SlotMap
 
             if (oldLength >= maxPageCount)
             {
-                Checks.Suggest(false, $"Cannot add more page to {s_name}: the limit of {maxPageCount} pages has been reached.");
+                Checks.Suggest(false
+                    , $"Cannot add more page to {s_name}: the limit of {maxPageCount} pages has been reached."
+                );
+
                 return;
             }
 
@@ -188,9 +260,12 @@ namespace Collections.Extensions.SlotMap
             Checks.Require(key.IsValid, $"`{nameof(key)}` is invalid.");
 
             var address = SlotAddress.FromIndex(key.Index, pageSize);
-            var pageCount = (uint)pages.LongLength;
+            var pageCount = (uint)pages.Length;
 
-            Checks.Require(address.PageIndex < pageCount, $"`{nameof(key)}.{nameof(SlotKey.Index)}` is out of range. Argument value: {key.Index}.");
+            Checks.Require(
+                  address.PageIndex < pageCount
+                , $"`{nameof(key)}.{nameof(SlotKey.Index)}` is out of range. Argument value: {key.Index}."
+            );
 
             itemIndex = address.ItemIndex;
             return ref pages[address.PageIndex];

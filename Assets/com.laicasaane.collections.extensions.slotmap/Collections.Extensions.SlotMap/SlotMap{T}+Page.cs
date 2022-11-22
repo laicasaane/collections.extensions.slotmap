@@ -163,14 +163,14 @@ namespace Collections.Extensions.SlotMap
 
                 _items[index] = default;
 
-                if (currentVersion == SlotVersion.MaxValue)
+                if (currentVersion < SlotVersion.MaxValue)
                 {
-                    _count = 0;
-                    currentTombstone = true;
+                    _count -= 1;
                 }
                 else
                 {
-                    _count -= 1;
+                    _count = 0;
+                    currentTombstone = true;
                 }
 
                 return true;
