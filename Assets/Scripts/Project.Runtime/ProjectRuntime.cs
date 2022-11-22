@@ -10,18 +10,26 @@ namespace Project.Runtime
     {
         private void Start()
         {
-            var slotmap = new SlotMap<string>();
-            var slotkeys = new SlotKey[10];
-            
-            foreach (var i in 0..9)
+            const int MAX_INDEX = 63;
+
+            var slotmap = new SlotMap<string>(32);
+            var slotkeys = new SlotKey[MAX_INDEX + 1];
+
+            foreach (var i in 0..MAX_INDEX)
             {
                 slotkeys[i] = slotmap.Add(i.ToString());
             }
 
-            foreach (var i in 0..9)
+            foreach (var i in 0..MAX_INDEX)
             {
-                Debug.Log(slotkeys[i]);
+                var key = slotkeys[i];
+                var address = SlotAddress.FromIndex(key.Index, slotmap.PageSize);
+                Debug.Log($"{key} = {key.Raw} :: {address} = {address.Raw}");
             }
+
+            var xAdd = new SlotAddress(uint.MaxValue, uint.MaxValue);
+            Debug.Log($"{xAdd} = {xAdd.Raw}");
+            Debug.Log(ulong.MaxValue);
         }
     }
 
