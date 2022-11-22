@@ -117,7 +117,7 @@ namespace Collections.Extensions.SlotMap
             if (freeKeys.Count <= _freeIndicesLimit)
             {
                 var oldKey = freeKeys.Dequeue();
-                key = oldKey.WithVersion(oldKey.Version + 1);
+                key = oldKey.WithVersion(oldKey.Version + 1).WithTag(default);
                 address = Address.FromIndex(key.Index, _pageSize);
                 return true;
             }
