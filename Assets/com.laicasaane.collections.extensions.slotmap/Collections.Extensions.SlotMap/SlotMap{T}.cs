@@ -34,13 +34,13 @@ namespace Collections.Extensions.SlotMap
         public T Get(SlotKey key)
         {
             ref var page = ref GetPage(_pages, _pageSize, key, out var itemIndex);
+            return page.Get(itemIndex, key.Version);
+        }
 
-            if (page.TryGet(itemIndex, key.Version, out var item))
-            {
-                return item;
-            }
-
-            throw new SlotMapException($"Cannot get item from {s_name}.");
+        public ref readonly T GetRef(SlotKey key)
+        {
+            ref var page = ref GetPage(_pages, _pageSize, key, out var itemIndex);
+            return ref page.GetRef(itemIndex, key.Version);
         }
 
         public bool TryGet(SlotKey key, out T item)
@@ -56,14 +56,14 @@ namespace Collections.Extensions.SlotMap
                 return key;
             }
 
-            throw new SlotMapException($"Cannot add item to {s_name}.");
+            throw new SlotMapException($"Cannot add `{nameof(item)}` to {s_name}. Argument value: {item}.");
         }
 
         public bool TryAdd(T item, out SlotKey key)
         {
             if (TryGetNewKey(out key, out var address) == false)
             {
-                Checks.Suggest(false, $"Cannot add more item to {s_name}>.");
+                Checks.Suggest(false, $"Cannot add `{nameof(item)}` to {s_name}. Argument value: {item}.");
                 return false;
             }
 
@@ -80,7 +80,7 @@ namespace Collections.Extensions.SlotMap
                 return key.WithVersion(newVersion);
             }
 
-            throw new SlotMapException($"Cannot replace item in {s_name}.");
+            throw new SlotMapException($"Cannot replace `{nameof(item)}` in {s_name}. Argument value: {item}");
         }
 
         public bool TryReplace(SlotKey key, T item, out SlotKey newKey)
@@ -112,13 +112,14 @@ namespace Collections.Extensions.SlotMap
 
         private bool TryGetNewKey(out SlotKey key, out Address address)
         {
+            var pageSize = _pageSize;
             var freeKeys = _freeKeys;
 
-            if (freeKeys.Count <= _freeIndicesLimit)
+            if (freeKeys.Count > _freeIndicesLimit)
             {
                 var oldKey = freeKeys.Dequeue();
                 key = oldKey.WithVersion(oldKey.Version + 1).WithTag(default);
-                address = Address.FromIndex(key.Index, _pageSize);
+                address = Address.FromIndex(key.Index, pageSize);
                 return true;
             }
 
@@ -129,7 +130,7 @@ namespace Collections.Extensions.SlotMap
             ref var lastPage = ref pages[lastPageIndex];
             var lastPageCount = lastPage.Count;
 
-            if (lastPageCount >= _pageSize)
+            if (lastPageCount >= pageSize)
             {
                 if (pageCount >= _maxPageCount)
                 {
@@ -153,10 +154,11 @@ namespace Collections.Extensions.SlotMap
         {
             var oldPages = _pages;
             var oldLength = oldPages.Length;
+            var maxPageCount = _maxPageCount;
 
-            if (oldLength >= _maxPageCount)
+            if (oldLength >= maxPageCount)
             {
-                Checks.Suggest(false, $"Cannot add more page to {s_name}: the limit of {_maxPageCount} pages has been reached.");
+                Checks.Suggest(false, $"Cannot add more page to {s_name}: the limit of {maxPageCount} pages has been reached.");
                 return;
             }
 

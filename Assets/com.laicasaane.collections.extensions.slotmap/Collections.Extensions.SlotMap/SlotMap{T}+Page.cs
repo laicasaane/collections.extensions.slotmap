@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
+using static UnityEditor.Progress;
 
 namespace Collections.Extensions.SlotMap
 {
@@ -23,6 +24,38 @@ namespace Collections.Extensions.SlotMap
 
             public uint Count => _count;
 
+            public T Get(uint index, SlotVersion version)
+            {
+                ref var currentTombstone = ref _tombstones[index];
+
+                Checks.Require(currentTombstone == false, $"Cannot get item because `key` is pointing to a dead slot.");
+
+                ref var currentVersion = ref _versions[index];
+
+                Checks.Require(currentVersion == version, $"Cannot get item because " +
+                    $"`key.{nameof(SlotKey.Version)}` is different from the current version. " +
+                    $"Argument value: {version}. Current value: {currentVersion}."
+                );
+
+                return _items[index];
+            }
+
+            public ref readonly T GetRef(uint index, SlotVersion version)
+            {
+                ref var currentTombstone = ref _tombstones[index];
+
+                Checks.Require(currentTombstone == false, $"Cannot get item because `key` is pointing to a dead slot.");
+
+                ref var currentVersion = ref _versions[index];
+
+                Checks.Require(currentVersion == version, $"Cannot get item because " +
+                    $"`key.{nameof(SlotKey.Version)}` is different from the current version. " +
+                    $"Argument value: {version}. Current value: {currentVersion}."
+                );
+
+                return ref _items[index];
+            }
+
             public bool TryGet(uint index, SlotVersion version, out T item)
             {
                 ref var currentTombstone = ref _tombstones[index];
@@ -38,7 +71,11 @@ namespace Collections.Extensions.SlotMap
 
                 if (currentVersion != version)
                 {
-                    Checks.Suggest(false, $"Cannot get item because `key.{nameof(SlotKey.Version)}` is different from the current version. Argument value: {version}. Current value: {currentVersion}.");
+                    Checks.Suggest(false, $"Cannot get item because " +
+                        $"`key.{nameof(SlotKey.Version)}` is different from the current version. " +
+                        $"Argument value: {version}. Current value: {currentVersion}."
+                    );
+
                     item = default;
                     return false;
                 }
@@ -61,7 +98,11 @@ namespace Collections.Extensions.SlotMap
 
                 if (currentVersion >= version)
                 {
-                    Checks.Suggest(false, $"Cannot add item because `key.{nameof(SlotKey.Version)}` is lesser than or equal to the current version. Argument value: {version}. Current value: {currentVersion}.");
+                    Checks.Suggest(false, $"Cannot add item because " +
+                        $"`key.{nameof(SlotKey.Version)}` is lesser than or equal to the current version. " +
+                        $"Argument value: {version}. Current value: {currentVersion}."
+                    );
+
                     return false;
                 }
 
@@ -86,7 +127,11 @@ namespace Collections.Extensions.SlotMap
 
                 if (currentVersion != version)
                 {
-                    Checks.Suggest(false, $"Cannot add item because `key.{nameof(SlotKey.Version)}` is different from the current version. Argument value: {version}. Current value: {currentVersion}.");
+                    Checks.Suggest(false, $"Cannot add item because " +
+                        $"`key.{nameof(SlotKey.Version)}` is different from the current version. " +
+                        $"Argument value: {version}. Current value: {currentVersion}."
+                    );
+
                     newVersion = default;
                     return false;
                 }
@@ -109,7 +154,11 @@ namespace Collections.Extensions.SlotMap
 
                 if (currentVersion != version)
                 {
-                    Checks.Suggest(false, $"Cannot remove item because the `key.{nameof(SlotKey.Version)}` is different from the current version. Argument value: {version}. Current value: {currentVersion}.");
+                    Checks.Suggest(false, $"Cannot remove item because the " +
+                        $"`key.{nameof(SlotKey.Version)}` is different from the current version. " +
+                        $"Argument value: {version}. Current value: {currentVersion}."
+                    );
+
                     return false;
                 }
 
