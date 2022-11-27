@@ -10,15 +10,13 @@ namespace Collections.Extensions.SlotMaps
             private uint _count;
             private uint _tombstoneCount;
 
-            private readonly bool[] _tombstones;
-            private readonly bool[] _occupied;
+            private readonly SlotState[] _states;
             private readonly SlotVersion[] _versions;
             private readonly T[] _items;
 
             public Page(uint size)
             {
-                _tombstones= new bool[size];
-                _occupied = new bool[size];
+                _states= new SlotState[size];
                 _versions = new SlotVersion[size];
                 _items = new T[size];
                 _count = 0;
@@ -39,17 +37,19 @@ namespace Collections.Extensions.SlotMaps
 
             public ref T GetRef(uint index, SlotKey key)
             {
-                Checks.Require(_tombstones[index] == false
+                ref readonly var state = ref _states[index];
+
+                Checks.Require(state != SlotState.Tombstone
                     , $"Cannot get item because `key` is pointing to a dead slot. "
                     + $"Key value: {key}."
                 );
 
-                Checks.Require(_occupied[index] == true
+                Checks.Require(state == SlotState.Occupied
                     , $"Cannot get item because `key` is pointing to an empty slot. "
                     + $"Key value: {key}."
                 );
 
-                var currentVersion = _versions[index];
+                ref readonly var currentVersion = ref _versions[index];
 
                 Checks.Require(currentVersion == key.Version
                     , $"Cannot get item because `key.{nameof(SlotKey.Version)}` "
@@ -62,7 +62,9 @@ namespace Collections.Extensions.SlotMaps
 
             public ref T GetRefNotThrow(uint index, SlotKey key)
             {
-                if (_tombstones[index] == true)
+                ref readonly var state = ref _states[index];
+
+                if (state == SlotState.Tombstone)
                 {
                     Checks.Suggest(false
                         , $"Cannot get item because `key` is pointing to a dead slot. "
@@ -72,7 +74,7 @@ namespace Collections.Extensions.SlotMaps
                     return ref Unsafe.NullRef<T>();
                 }
 
-                if (_occupied[index] == false)
+                if (state == SlotState.Empty)
                 {
                     Checks.Suggest(false
                         , $"Cannot get item because `key` is pointing to an empty slot. "
@@ -82,7 +84,7 @@ namespace Collections.Extensions.SlotMaps
                     return ref Unsafe.NullRef<T>();
                 }
 
-                var currentVersion = _versions[index];
+                ref readonly var currentVersion = ref _versions[index];
 
                 if (currentVersion != key.Version)
                 {
@@ -100,14 +102,14 @@ namespace Collections.Extensions.SlotMaps
 
             public void Add(uint index, SlotKey key, T item)
             {
-                Checks.Require(_tombstones[index] == false
+                ref var state = ref _states[index];
+
+                Checks.Require(state != SlotState.Tombstone
                     , $"Cannot add item because `key` is pointing to a dead slot. "
                     + $"Key value: {key}."
                 );
 
-                ref var currentOccupied = ref _occupied[index];
-
-                Checks.Require(currentOccupied == false
+                Checks.Require(state == SlotState.Empty
                     , $"Cannot add item because `key` is pointing to an occupied slot. "
                     + $"Key value: {key}."
                 );
@@ -124,13 +126,15 @@ namespace Collections.Extensions.SlotMaps
                 _items[index] = item;
                 _count++;
 
-                currentOccupied = true;
+                state = SlotState.Occupied;
                 currentVersion = version;
             }
 
             public bool TryAdd(uint index, SlotKey key, T item)
             {
-                if (_tombstones[index] == true)
+                ref var state = ref _states[index];
+
+                if (state == SlotState.Tombstone)
                 {
                     Checks.Suggest(false
                         , $"Cannot add item because `key` is pointing to a dead slot. "
@@ -140,9 +144,7 @@ namespace Collections.Extensions.SlotMaps
                     return false;
                 }
 
-                ref var currentOccupied = ref _occupied[index];
-
-                if (currentOccupied == true)
+                if (state != SlotState.Empty)
                 {
                     Checks.Suggest(false
                         , $"Cannot add item because `key` is pointing to an occupied slot. "
@@ -169,14 +171,16 @@ namespace Collections.Extensions.SlotMaps
                 _items[index] = item;
                 _count++;
 
-                currentOccupied = true;
+                state = SlotState.Occupied;
                 currentVersion = version;
                 return true;
             }
 
             public bool TryReplace(uint index, SlotKey key, T item, out SlotKey newKey)
             {
-                if (_tombstones[index] == true)
+                ref var state = ref _states[index];
+
+                if (state == SlotState.Tombstone)
                 {
                     Checks.Suggest(false
                         , $"Cannot replace item because `key` is pointing to a dead slot. "
@@ -187,7 +191,7 @@ namespace Collections.Extensions.SlotMaps
                     return false;
                 }
 
-                if (_occupied[index] == false)
+                if (state != SlotState.Occupied)
                 {
                     Checks.Suggest(false
                         , $"Cannot replace item because `key` is pointing to an empty slot. "
@@ -221,9 +225,9 @@ namespace Collections.Extensions.SlotMaps
 
             public bool TryRemove(uint index, SlotKey key)
             {
-                ref var currentTombstone = ref _tombstones[index];
+                ref var state = ref _states[index];
 
-                if (currentTombstone == true)
+                if (state == SlotState.Tombstone)
                 {
                     Checks.Suggest(false
                         , $"Cannot remove item because `{nameof(key)}` is pointing to a dead slot. "
@@ -233,9 +237,7 @@ namespace Collections.Extensions.SlotMaps
                     return true;
                 }
 
-                ref var currentOccupied = ref _occupied[index];
-
-                if (currentOccupied == false)
+                if (state != SlotState.Occupied)
                 {
                     Checks.Suggest(false
                         , $"Cannot remove item because `{nameof(key)}` is pointing to an empty slot. "
@@ -245,7 +247,7 @@ namespace Collections.Extensions.SlotMaps
                     return false;
                 }
 
-                var currentVersion = _versions[index];
+                ref readonly var currentVersion = ref _versions[index];
 
                 if (currentVersion != key.Version)
                 {
@@ -259,13 +261,16 @@ namespace Collections.Extensions.SlotMaps
                 }
 
                 _items[index] = default;
-                currentOccupied = false;
                 _count -= 1;
 
                 if (currentVersion == SlotVersion.MaxValue)
                 {
-                    currentTombstone = true;
+                    state = SlotState.Tombstone;
                     _tombstoneCount++;
+                }
+                else
+                {
+                    state = SlotState.Empty;
                 }
 
                 return true;
@@ -273,14 +278,12 @@ namespace Collections.Extensions.SlotMaps
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public bool Contains(uint index, SlotKey key)
-                => _tombstones[index] == false
-                && _occupied[index] == true 
+                => _states[index] == SlotState.Occupied 
                 && _versions[index] == key.Version;
 
             public void Clear()
             {
-                Array.Clear(_tombstones, 0, _tombstones.Length);
-                Array.Clear(_occupied, 0, _occupied.Length);
+                Array.Clear(_states, 0, _states.Length);
                 Array.Clear(_versions, 0, _versions.Length);
 
                 ClearItems();
