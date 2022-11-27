@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 
-namespace Collections.Extensions.SlotMap
+namespace Collections.Extensions.SlotMaps
 {
     public partial class SlotMap<T>
     {

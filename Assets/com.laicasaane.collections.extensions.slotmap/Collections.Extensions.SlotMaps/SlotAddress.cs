@@ -2,7 +2,7 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-namespace Collections.Extensions.SlotMap
+namespace Collections.Extensions.SlotMaps
 {
     [StructLayout(LayoutKind.Explicit)]
     public readonly struct SlotAddress : IEquatable<SlotAddress>

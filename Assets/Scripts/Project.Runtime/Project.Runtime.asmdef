@@ -3,7 +3,7 @@
     "rootNamespace": "Project.Runtime",
     "references": [
         "UnityEngine.UI",
-        "Collections.Extensions.SlotMap"
+        "Collections.Extensions.SlotMaps"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

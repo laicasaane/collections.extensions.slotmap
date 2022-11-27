@@ -9,7 +9,7 @@ using s_version = System.Int32;
 using u_version = System.UInt32;
 #endif
 
-namespace Collections.Extensions.SlotMap
+namespace Collections.Extensions.SlotMaps
 {
 #if ENABLE_SLOTMAP_KEY_TAG
     /// <summary>

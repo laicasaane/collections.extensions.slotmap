@@ -1,7 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using Collections.Extensions.SlotMap;
+using Collections.Extensions.SlotMaps;
 using UnityEngine;
 
 namespace Project.Runtime

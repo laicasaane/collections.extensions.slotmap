@@ -4,7 +4,7 @@
 
 using System;
 
-namespace Collections.Extensions.SlotMap
+namespace Collections.Extensions.SlotMaps
 {
     internal static class Checks
     {

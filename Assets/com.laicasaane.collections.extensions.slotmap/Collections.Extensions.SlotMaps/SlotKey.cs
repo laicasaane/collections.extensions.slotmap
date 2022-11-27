@@ -2,7 +2,7 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-namespace Collections.Extensions.SlotMap
+namespace Collections.Extensions.SlotMaps
 {
     /// <summary>
     /// Represents a key of the <see cref="SlotMap{T}"/> data structure.

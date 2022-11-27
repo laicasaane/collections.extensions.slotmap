@@ -1,6 +1,6 @@
 {
-    "name": "Collections.Extensions.SlotMap",
-    "rootNamespace": "Collections.Extensions.SlotMap",
+    "name": "Collections.Extensions.SlotMaps",
+    "rootNamespace": "Collections.Extensions.SlotMaps",
     "references": [],
     "includePlatforms": [],
     "excludePlatforms": [],
