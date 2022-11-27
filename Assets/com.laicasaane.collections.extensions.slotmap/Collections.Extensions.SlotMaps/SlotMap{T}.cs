@@ -6,6 +6,9 @@ namespace Collections.Extensions.SlotMaps
 {
     public partial class SlotMap<T>
     {
+        public const int DEFAULT_PAGE_SIZE = 1024;
+        public const int DEFAULT_FREE_INDICES_LITMIT = 32;
+
         private static readonly string s_name = $"{nameof(SlotMap<T>)}<{typeof(T).Name}>";
         private static readonly bool s_itemIsUnmanaged = RuntimeHelpers.IsReferenceOrContainsReferences<T>();
 
@@ -19,24 +22,35 @@ namespace Collections.Extensions.SlotMaps
         private uint _count;
         private uint _tombstoneCount;
 
-        public SlotMap(uint pageSize = 1024, uint freeIndicesLimit = 32)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="pageSize">The maximum number of items that can be stored in a page.</param>
+        /// <param name="freeIndicesLimit">
+        /// <para>The maximum number of indices that was removed and can be free.</para>
+        /// <para>Free indices will be reused when their total count exceeds this threshold.</para>
+        /// </param>
+        public SlotMap(int pageSize = DEFAULT_PAGE_SIZE, int freeIndicesLimit = DEFAULT_FREE_INDICES_LITMIT)
         {
+            Checks.Require(pageSize > 0, $"`{nameof(pageSize)}` must be greater than 0. Page size value: {pageSize}.");
+
+            _pageSize = (uint)Math.Clamp(pageSize, 0, int.MaxValue);
+            _freeIndicesLimit = (uint)Math.Clamp(freeIndicesLimit, 0, pageSize);
+
             Checks.Require(
-                  IsPowerOfTwo(pageSize)
-                , $"`{nameof(pageSize)}` must be a power of two. Page size value: {pageSize}."
+                  IsPowerOfTwo(_pageSize)
+                , $"`{nameof(pageSize)}` must be a power of two. Page size value: {_pageSize}."
             );
 
             Checks.Suggest(
-                  freeIndicesLimit <= pageSize
+                  _freeIndicesLimit <= _pageSize
                 , $"`{nameof(freeIndicesLimit)}` should be lesser than "
-                + $"or equal to `{nameof(pageSize)}: {pageSize}`, "
-                + $"or it would be clamped to `{nameof(pageSize)}`. "
-                + $"Free indices limit value: {freeIndicesLimit}."
+                + $"or equal to `{nameof(pageSize)}: {_pageSize}`, "
+                + $"or it would be clamped to `{nameof(_pageSize)}`. "
+                + $"Free indices limit value: {_freeIndicesLimit}."
             );
 
-            _pageSize = pageSize;
-            _freeIndicesLimit = Math.Clamp(freeIndicesLimit, 0, pageSize);
-            _maxPageCount = GetMaxPageCount(pageSize);
+            _maxPageCount = GetMaxPageCount(_pageSize);
             _count = 0;
             _tombstoneCount = 0;
 
@@ -47,6 +61,12 @@ namespace Collections.Extensions.SlotMaps
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get => _pageSize;
+        }
+
+        public uint FreeIndicesLimit
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => _freeIndicesLimit;
         }
 
         public uint Count
