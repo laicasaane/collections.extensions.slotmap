@@ -7,6 +7,7 @@ namespace Collections.Extensions.SlotMaps
     public partial class SlotMap<T>
     {
         public const int DEFAULT_PAGE_SIZE = 1024;
+        public const int MAX_PAGE_SIZE = 1 << 30;
         public const int DEFAULT_FREE_INDICES_LITMIT = 32;
 
         private static readonly string s_name = $"{nameof(SlotMap<T>)}<{typeof(T).Name}>";
@@ -22,23 +23,27 @@ namespace Collections.Extensions.SlotMaps
         private uint _itemCount;
         private uint _tombstoneCount;
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="pageSize">The maximum number of items that can be stored in a page.</param>
+        /// <summary></summary>
+        /// <param name="pageSize">
+        /// <para>The maximum number of items that can be stored in a page.</para>
+        /// <para>Must be a power of two.</para>
+        /// </param>
         /// <param name="freeIndicesLimit">
         /// <para>The maximum number of indices that was removed and can be free.</para>
         /// <para>Free indices will be reused when their total count exceeds this threshold.</para>
         /// </param>
-        public SlotMap(int pageSize = DEFAULT_PAGE_SIZE, int freeIndicesLimit = DEFAULT_FREE_INDICES_LITMIT)
+        public SlotMap(
+              int pageSize = DEFAULT_PAGE_SIZE
+            , int freeIndicesLimit = DEFAULT_FREE_INDICES_LITMIT
+        )
         {
             Checks.Require(pageSize > 0, $"`{nameof(pageSize)}` must be greater than 0. Page size value: {pageSize}.");
 
-            _pageSize = (uint)Math.Clamp(pageSize, 0, int.MaxValue);
+            _pageSize = (uint)Math.Clamp(pageSize, 0, MAX_PAGE_SIZE);
             _freeIndicesLimit = (uint)Math.Clamp(freeIndicesLimit, 0, pageSize);
 
             Checks.Require(
-                  IsPowerOfTwo(_pageSize)
+                  Utilities.IsPowerOfTwo(_pageSize)
                 , $"`{nameof(pageSize)}` must be a power of two. Page size value: {_pageSize}."
             );
 
@@ -50,7 +55,7 @@ namespace Collections.Extensions.SlotMaps
                 + $"Free indices limit value: {_freeIndicesLimit}."
             );
 
-            _maxPageCount = GetMaxPageCount(_pageSize);
+            _maxPageCount = Utilities.GetMaxPageCount(_pageSize);
             _itemCount = 0;
             _tombstoneCount = 0;
 
@@ -105,7 +110,7 @@ namespace Collections.Extensions.SlotMaps
 
         public T Get(SlotKey key)
         {
-            if (FindAddress(_pages, _pageSize, key, out var address))
+            if (Utilities.FindAddress(_pages.Length, _pageSize, key, out var address))
             {
                 ref var page = ref _pages[address.PageIndex];
                 return page.GetRef(address.ItemIndex, key);
@@ -126,6 +131,7 @@ namespace Collections.Extensions.SlotMaps
             );
 
             var pages = _pages;
+            var pageLength = pages.Length;
             var pageSize = _pageSize;
             var length = keys.Length;
 
@@ -133,7 +139,7 @@ namespace Collections.Extensions.SlotMaps
             {
                 ref readonly var key = ref keys[i];
 
-                if (FindAddress(pages, pageSize, key, out var address))
+                if (Utilities.FindAddress(pageLength, pageSize, key, out var address))
                 {
                     ref var page = ref pages[address.PageIndex];
                     returnItems[i] = page.GetRef(address.ItemIndex, key);
@@ -149,7 +155,7 @@ namespace Collections.Extensions.SlotMaps
 
         public ref readonly T GetRef(SlotKey key)
         {
-            if (FindAddress(_pages, _pageSize, key, out var address))
+            if (Utilities.FindAddress(_pages.Length, _pageSize, key, out var address))
             {
                 ref var page = ref _pages[address.PageIndex];
                 return ref page.GetRef(address.ItemIndex, key);
@@ -160,7 +166,7 @@ namespace Collections.Extensions.SlotMaps
 
         public ref readonly T GetRefNotThrow(SlotKey key)
         {
-            if (FindAddress(_pages, _pageSize, key, out var address))
+            if (Utilities.FindAddress(_pages.Length, _pageSize, key, out var address))
             {
                 ref var page = ref _pages[address.PageIndex];
                 return ref page.GetRefNotThrow(address.ItemIndex, key);
@@ -171,7 +177,7 @@ namespace Collections.Extensions.SlotMaps
 
         public bool TryGet(SlotKey key, out T item)
         {
-            if (FindAddress(_pages, _pageSize, key, out var address) == false)
+            if (Utilities.FindAddress(_pages.Length, _pageSize, key, out var address) == false)
             {
                 item = default;
                 return false;
@@ -210,6 +216,7 @@ namespace Collections.Extensions.SlotMaps
             );
 
             var pages = _pages;
+            var pageLength = pages.Length;
             var pageSize = _pageSize;
             var length = keys.Length;
             var destIndex = 0;
@@ -218,7 +225,7 @@ namespace Collections.Extensions.SlotMaps
             {
                 ref readonly var key = ref keys[i];
 
-                if (FindAddress(pages, pageSize, key, out var address) == false)
+                if (Utilities.FindAddress(pageLength, pageSize, key, out var address) == false)
                 {
                     continue;
                 }
@@ -356,7 +363,7 @@ namespace Collections.Extensions.SlotMaps
 
         public SlotKey Replace(SlotKey key, T item)
         {
-            if (FindAddress(_pages, _pageSize, key, out var address))
+            if (Utilities.FindAddress(_pages.Length, _pageSize, key, out var address))
             {
                 ref var page = ref _pages[address.PageIndex];
 
@@ -371,7 +378,7 @@ namespace Collections.Extensions.SlotMaps
 
         public bool TryReplace(SlotKey key, T item, out SlotKey newKey)
         {
-            if (FindAddress(_pages, _pageSize, key, out var address) == false)
+            if (Utilities.FindAddress(_pages.Length, _pageSize, key, out var address) == false)
             {
                 newKey = key;
                 return false;
@@ -384,8 +391,9 @@ namespace Collections.Extensions.SlotMaps
         public bool Remove(SlotKey key)
         {
             var pages = _pages;
+            var pageLength = pages.Length;
 
-            if (FindAddress(pages, _pageSize, key, out var address) == false)
+            if (Utilities.FindAddress(pageLength, _pageSize, key, out var address) == false)
             {
                 return false;
             }
@@ -414,6 +422,7 @@ namespace Collections.Extensions.SlotMaps
         public void RemoveRange(in ReadOnlySpan<SlotKey> keys)
         {
             var pages = _pages;
+            var pageLength = pages.Length;
             var pageSize = _pageSize;
             var freeKeys = _freeKeys;
             var length = keys.Length;
@@ -425,7 +434,7 @@ namespace Collections.Extensions.SlotMaps
             {
                 ref readonly var key = ref keys[i];
 
-                if (FindAddress(pages, pageSize, key, out var address) == false)
+                if (Utilities.FindAddress(pageLength, pageSize, key, out var address) == false)
                 {
                     continue;
                 }
@@ -452,7 +461,7 @@ namespace Collections.Extensions.SlotMaps
 
         public bool Contains(SlotKey key)
         {
-            if (FindAddress(_pages, _pageSize, key, out var address) == false)
+            if (Utilities.FindAddress(_pages.Length, _pageSize, key, out var address) == false)
             {
                 return false;
             }
@@ -553,53 +562,5 @@ namespace Collections.Extensions.SlotMaps
 
             return true;
         }
-
-        private static bool FindAddress(
-              Page[] pages
-            , uint pageSize
-            , SlotKey key
-            , out SlotAddress address
-        )
-        {
-            if (key.IsValid == false)
-            {
-                Checks.Suggest(false, $"`{nameof(key)}` is invalid. Key value: {key}.");
-
-                address = default;
-                return false;
-            }
-
-            address = SlotAddress.FromIndex(key.Index, pageSize);
-            var pageCount = (uint)pages.Length;
-
-            if (address.PageIndex >= pageCount)
-            {
-                Checks.Suggest(false
-                    , $"`{nameof(key)}.{nameof(SlotKey.Index)}` is out of range. Key value: {key}."
-                );
-
-                address = default;
-                return false;
-            }
-
-            return true;
-        }
-
-        /// <summary>
-        /// <para>Because <see cref="PageSize"/> must be a power of two, its minimum value would be 2.</para>
-        /// <para>Thus the highest page count possible would always be <see cref="int"/>.<see cref="int.MaxValue"/>.</para>
-        /// <para>Thus <see cref="uint"/> overflow would never occur.</para>
-        /// </summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static uint GetMaxPageCount(uint pageSize)
-        {
-            const uint MAX_INDEX = uint.MaxValue;
-            var result = MAX_INDEX / pageSize;
-            return (MAX_INDEX % pageSize == 0) ? result : result + 1;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static bool IsPowerOfTwo(uint x)
-            => (x != 0) && ((x & (x - 1)) == 0);
     }
 }
