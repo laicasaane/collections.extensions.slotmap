@@ -8,6 +8,7 @@ namespace Collections.Extensions.SlotMaps
         private struct Page
         {
             private uint _count;
+            private uint _tombstoneCount;
 
             private readonly bool[] _tombstones;
             private readonly bool[] _occupied;
@@ -21,9 +22,20 @@ namespace Collections.Extensions.SlotMaps
                 _versions = new SlotVersion[size];
                 _items = new T[size];
                 _count = 0;
+                _tombstoneCount = 0;
             }
 
-            public uint Count => _count;
+            public uint Count
+            {
+                [MethodImpl(MethodImplOptions.AggressiveInlining)]
+                get => _count;
+            }
+
+            public uint TombstoneCount
+            {
+                [MethodImpl(MethodImplOptions.AggressiveInlining)]
+                get => _tombstoneCount;
+            }
 
             public ref T GetRef(uint index, SlotKey key)
             {
@@ -248,15 +260,12 @@ namespace Collections.Extensions.SlotMaps
 
                 _items[index] = default;
                 currentOccupied = false;
+                _count -= 1;
 
-                if (currentVersion < SlotVersion.MaxValue)
+                if (currentVersion == SlotVersion.MaxValue)
                 {
-                    _count -= 1;
-                }
-                else
-                {
-                    _count = 0;
                     currentTombstone = true;
+                    _tombstoneCount++;
                 }
 
                 return true;
