@@ -9,19 +9,11 @@ namespace Collections.Extensions.SlotMap
         private static readonly string s_name = $"{nameof(SlotMap<T>)}<{typeof(T).Name}>";
         private static readonly bool s_itemIsUnmanaged = RuntimeHelpers.IsReferenceOrContainsReferences<T>();
 
-        private const uint MAX_VALID_INDEX = uint.MaxValue;
-
         private readonly uint _pageSize;
         private readonly uint _freeIndicesLimit;
         private readonly uint _maxPageCount;
 
         private readonly Queue<SlotKey> _freeKeys = new();
-
-        ///***********************************************************************************///
-        /// Because <see cref="PageSize"/> must be a power of two                             ///
-        /// so its minimum value would be 2                                                   ///
-        /// so the maximum length of <see cref="_pages"/> would be <see cref="int.MaxValue"/> ///
-        ///***********************************************************************************///
 
         private Page[] _pages = Array.Empty<Page>();
         private uint _count;
@@ -44,7 +36,7 @@ namespace Collections.Extensions.SlotMap
 
             _pageSize = pageSize;
             _freeIndicesLimit = Math.Clamp(freeIndicesLimit, 0, pageSize);
-            _maxPageCount = GetMaxPageCount(MAX_VALID_INDEX, pageSize);
+            _maxPageCount = GetMaxPageCount(pageSize);
             _count = 0;
             _tombstoneCount = 0;
 
@@ -247,7 +239,13 @@ namespace Collections.Extensions.SlotMap
             if (freeKeys.Count > _freeIndicesLimit)
             {
                 var oldKey = freeKeys.Dequeue();
+
+#if ENABLE_SLOTMAP_KEY_TAG
                 key = oldKey.WithVersion(oldKey.Version + 1).WithTag(default);
+#else
+                key = oldKey.WithVersion(oldKey.Version + 1);
+#endif
+
                 address = SlotAddress.FromIndex(key.Index, pageSize);
                 return true;
             }
@@ -336,11 +334,17 @@ namespace Collections.Extensions.SlotMap
             return true;
         }
 
+        /// <summary>
+        /// <para>Because <see cref="PageSize"/> must be a power of two, its minimum value would be 2.</para>
+        /// <para>Thus the highest page count possible would always be <see cref="int"/>.<see cref="int.MaxValue"/>.</para>
+        /// <para>Thus <see cref="uint"/> overflow would never occur.</para>
+        /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static uint GetMaxPageCount(uint maxIndex, uint pageSize)
+        private static uint GetMaxPageCount(uint pageSize)
         {
-            var result = maxIndex / pageSize;
-            return (maxIndex % pageSize == 0) ? result : result + 1;
+            const uint MAX_INDEX = uint.MaxValue;
+            var result = MAX_INDEX / pageSize;
+            return (MAX_INDEX % pageSize == 0) ? result : result + 1;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
