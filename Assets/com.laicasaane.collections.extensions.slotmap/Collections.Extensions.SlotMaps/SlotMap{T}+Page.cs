@@ -7,11 +7,11 @@ namespace Collections.Extensions.SlotMaps
     {
         private struct Page
         {
-            private uint _count;
-            private uint _tombstoneCount;
-
             private readonly SlotMeta[] _metas;
             private readonly T[] _items;
+
+            private uint _count;
+            private uint _tombstoneCount;
 
             public Page(uint size)
             {

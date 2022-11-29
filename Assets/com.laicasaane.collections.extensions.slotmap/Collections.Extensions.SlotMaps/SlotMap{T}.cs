@@ -62,6 +62,19 @@ namespace Collections.Extensions.SlotMaps
             TryCreatePage();
         }
 
+        /// <summary></summary>
+        /// <param name="pageSize">
+        /// <para>The maximum number of items that can be stored in a page.</para>
+        /// <para>Must be a power of two.</para>
+        /// </param>
+        /// <param name="freeIndicesLimit">
+        /// <para>The maximum number of indices that was removed and can be free.</para>
+        /// <para>Free indices will be reused when their total count exceeds this threshold.</para>
+        /// </param>
+        public SlotMap(PowerOfTwo pageSize = PowerOfTwo.x1024, int freeIndicesLimit = DEFAULT_FREE_INDICES_LITMIT)
+            : this((int)pageSize, freeIndicesLimit)
+        { }
+
         /// <summary>
         /// The maximum number of items that can be stored in a page.
         /// </summary>
