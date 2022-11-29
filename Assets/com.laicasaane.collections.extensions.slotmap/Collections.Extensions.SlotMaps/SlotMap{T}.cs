@@ -47,7 +47,7 @@ namespace Collections.Extensions.SlotMaps
                 , $"`{nameof(pageSize)}` must be a power of two. Page size value: {_pageSize}."
             );
 
-            Checks.Suggest(
+            Checks.Warning(
                   _freeIndicesLimit <= _pageSize
                 , $"`{nameof(freeIndicesLimit)}` should be lesser than "
                 + $"or equal to `{nameof(pageSize)}: {_pageSize}`, "
@@ -302,7 +302,7 @@ namespace Collections.Extensions.SlotMaps
         {
             if (TryGetNewKey(out key, out var address) == false)
             {
-                Checks.Suggest(false, $"Cannot add `{nameof(item)}` to {s_name}. Item value: {item}.");
+                Checks.Warning(false, $"Cannot add `{nameof(item)}` to {s_name}. Item value: {item}.");
                 return false;
             }
 
@@ -341,7 +341,7 @@ namespace Collections.Extensions.SlotMaps
 
                 if (TryGetNewKey(out var key, out var address) == false)
                 {
-                    Checks.Suggest(false
+                    Checks.Warning(false
                         , $"Cannot add `{nameof(item)}` to {s_name} at index {i}. Item value: {item}."
                     );
                     continue;

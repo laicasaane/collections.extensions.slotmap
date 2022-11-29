@@ -66,7 +66,7 @@ namespace Collections.Extensions.SlotMaps
 
                 if (state == SlotState.Tombstone)
                 {
-                    Checks.Suggest(false
+                    Checks.Warning(false
                         , $"Cannot get item because `key` is pointing to a dead slot. "
                         + $"Key value: {key}."
                     );
@@ -76,7 +76,7 @@ namespace Collections.Extensions.SlotMaps
 
                 if (state == SlotState.Empty)
                 {
-                    Checks.Suggest(false
+                    Checks.Warning(false
                         , $"Cannot get item because `key` is pointing to an empty slot. "
                         + $"Key value: {key}."
                     );
@@ -88,7 +88,7 @@ namespace Collections.Extensions.SlotMaps
 
                 if (currentVersion != key.Version)
                 {
-                    Checks.Suggest(false
+                    Checks.Warning(false
                         , $"Cannot get item because `key.{nameof(SlotKey.Version)}` "
                         + $"is different from the current version. "
                         + $"Key value: {key}. Current version: {currentVersion}."
@@ -136,7 +136,7 @@ namespace Collections.Extensions.SlotMaps
 
                 if (state == SlotState.Tombstone)
                 {
-                    Checks.Suggest(false
+                    Checks.Warning(false
                         , $"Cannot add item because `key` is pointing to a dead slot. "
                         + $"Key value: {key}."
                     );
@@ -146,7 +146,7 @@ namespace Collections.Extensions.SlotMaps
 
                 if (state != SlotState.Empty)
                 {
-                    Checks.Suggest(false
+                    Checks.Warning(false
                         , $"Cannot add item because `key` is pointing to an occupied slot. "
                         + $"Key value: {key}."
                     );
@@ -159,7 +159,7 @@ namespace Collections.Extensions.SlotMaps
 
                 if (currentVersion >= version)
                 {
-                    Checks.Suggest(false
+                    Checks.Warning(false
                         , $"Cannot add item because `key.{nameof(SlotKey.Version)}` "
                         + $"is lesser than or equal to the current version. "
                         + $"Key value: {key}. Current version: {currentVersion}."
@@ -182,7 +182,7 @@ namespace Collections.Extensions.SlotMaps
 
                 if (state == SlotState.Tombstone)
                 {
-                    Checks.Suggest(false
+                    Checks.Warning(false
                         , $"Cannot replace item because `key` is pointing to a dead slot. "
                         + $"Key value: {key}."
                     );
@@ -193,7 +193,7 @@ namespace Collections.Extensions.SlotMaps
 
                 if (state != SlotState.Occupied)
                 {
-                    Checks.Suggest(false
+                    Checks.Warning(false
                         , $"Cannot replace item because `key` is pointing to an empty slot. "
                         + $"Key value: {key}."
                     );
@@ -207,7 +207,7 @@ namespace Collections.Extensions.SlotMaps
 
                 if (currentVersion != version)
                 {
-                    Checks.Suggest(false
+                    Checks.Warning(false
                         , $"Cannot add item because `key.{nameof(SlotKey.Version)}` "
                         + $"is different from the current version. "
                         + $"Key value: {key}. Current version: {currentVersion}."
@@ -229,7 +229,7 @@ namespace Collections.Extensions.SlotMaps
 
                 if (state == SlotState.Tombstone)
                 {
-                    Checks.Suggest(false
+                    Checks.Warning(false
                         , $"Cannot remove item because `{nameof(key)}` is pointing to a dead slot. "
                         + $"Key value: {key}."
                     );
@@ -239,7 +239,7 @@ namespace Collections.Extensions.SlotMaps
 
                 if (state != SlotState.Occupied)
                 {
-                    Checks.Suggest(false
+                    Checks.Warning(false
                         , $"Cannot remove item because `{nameof(key)}` is pointing to an empty slot. "
                         + $"Key value: {key}."
                     );
@@ -251,7 +251,7 @@ namespace Collections.Extensions.SlotMaps
 
                 if (currentVersion != key.Version)
                 {
-                    Checks.Suggest(false
+                    Checks.Warning(false
                         , $"Cannot remove item because the  `key.{nameof(SlotKey.Version)}` "
                         + $"is different from the current version. "
                         + $"Key value: {key}. Current version: {currentVersion}."

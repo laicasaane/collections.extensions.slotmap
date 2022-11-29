@@ -43,7 +43,7 @@ namespace Collections.Extensions.SlotMaps
         public SlotVersion(u_version value)
         {
             Checks.Require(value != INVALID, $"Version must be greater than or equal to {MIN}");
-            Checks.Suggest(value <= MAX, $"Version should be lesser than or equal to {MAX}");
+            Checks.Warning(value <= MAX, $"Version should be lesser than or equal to {MAX}");
 
             _raw = Math.Clamp(value, MIN, MAX);
         }

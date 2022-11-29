@@ -29,7 +29,7 @@ namespace Collections.Extensions.SlotMaps
 #if DISABLE_SLOTMAP_CHECKS
         [Conditional("__SLOTMAP_CHECKS_NEVER_DEFINED__")]
 #endif
-        public static void Suggest(bool assertion, string message)
+        public static void Warning(bool assertion, string message)
         {
 #if __UNITY_ENGINE__
             if (assertion == false)
@@ -43,7 +43,7 @@ namespace Collections.Extensions.SlotMaps
 #if DISABLE_SLOTMAP_CHECKS
         [Conditional("__SLOTMAP_CHECKS_NEVER_DEFINED__")]
 #endif
-        public static void RequireOrSuggest(bool required, bool assertion, string message)
+        public static void RequireOrWarning(bool required, bool assertion, string message)
         {
 #if __UNITY_ENGINE__
             if (assertion == false)
@@ -62,7 +62,7 @@ namespace Collections.Extensions.SlotMaps
 #if DISABLE_SLOTMAP_CHECKS
         [Conditional("__SLOTMAP_CHECKS_NEVER_DEFINED__")]
 #endif
-        public static void RequireOrSuggest(bool required, bool assertion, string message, System.Exception inner)
+        public static void RequireOrWarning(bool required, bool assertion, string message, System.Exception inner)
         {
 #if __UNITY_ENGINE__
             if (assertion == false)
