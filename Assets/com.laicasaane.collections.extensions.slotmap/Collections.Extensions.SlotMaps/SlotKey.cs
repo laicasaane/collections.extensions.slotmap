@@ -18,16 +18,7 @@ namespace Collections.Extensions.SlotMaps
         [FieldOffset(0)]
         private readonly ulong _raw;
 
-#if ENABLE_SLOTMAP_KEY_TAG
         [FieldOffset(0)]
-        private readonly ushort _tag;
-#endif
-
-#if ENABLE_SLOTMAP_KEY_TAG
-        [FieldOffset(2)]
-#else
-        [FieldOffset(0)]
-#endif
         private readonly SlotVersion _version;
 
         [FieldOffset(4)]
@@ -39,15 +30,6 @@ namespace Collections.Extensions.SlotMaps
             _version = SlotVersion.MinValue;
         }
 
-#if ENABLE_SLOTMAP_KEY_TAG
-        public SlotKey(uint index, ushort tag) : this()
-        {
-            _index = index;
-            _version = SlotVersion.MinValue;
-            _tag = tag;
-        }
-#endif
-
         public SlotKey(uint index, SlotVersion version) : this()
         {
             Checks.Require(version.IsValid, $"`{nameof(version)}` is invalid.");
@@ -55,17 +37,6 @@ namespace Collections.Extensions.SlotMaps
             _index = index;
             _version = version;
         }
-
-#if ENABLE_SLOTMAP_KEY_TAG
-        public SlotKey(uint index, SlotVersion version, ushort tag) : this()
-        {
-            Checks.Require(version.IsValid, $"`{nameof(version)}` is invalid.");
-
-            _index = index;
-            _version = version;
-            _tag = tag;
-        }
-#endif
 
         public ulong Raw
         {
@@ -85,14 +56,6 @@ namespace Collections.Extensions.SlotMaps
             get => _version;
         }
 
-#if ENABLE_SLOTMAP_KEY_TAG
-        public ushort Tag
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get => _tag;
-        }
-#endif
-
         /// <summary>
         /// The key is only valid if its <see cref="_version"/> is valid.
         /// </summary>
@@ -109,25 +72,8 @@ namespace Collections.Extensions.SlotMaps
         {
             Checks.Require(version.IsValid, $"`{nameof(version)}` is invalid.");
 
-#if ENABLE_SLOTMAP_KEY_TAG
-            return new(_index, version, _tag);
-#else
             return new(_index, version);
-#endif
         }
-
-#if ENABLE_SLOTMAP_KEY_TAG
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public SlotKey WithTag(ushort tag)
-            => new(_index, _version, tag);
-
-        public void Deconstruct(out uint index, out SlotVersion version, out ushort tag)
-        {
-            index = _index;
-            version = _version;
-            tag = _tag;
-        }
-#endif
 
         public void Deconstruct(out uint index, out SlotVersion version)
         {
@@ -146,13 +92,8 @@ namespace Collections.Extensions.SlotMaps
         public override int GetHashCode()
             => _raw.GetHashCode();
 
-#if ENABLE_SLOTMAP_KEY_TAG
-        public override string ToString()
-            => $"({_index}, {_version}, {_tag})";
-#else
         public override string ToString()
             => $"({_index}, {_version})";
-#endif
 
         public bool TryFormat(Span<char> destination, out int charsWritten, ReadOnlySpan<char> format = default, IFormatProvider provider = null)
         {
@@ -178,30 +119,9 @@ namespace Collections.Extensions.SlotMaps
                 return false;
             }
 
-#if ENABLE_SLOTMAP_KEY_TAG
-
-            destination[versionCharsWritten++] = ',';
-            destination[versionCharsWritten++] = ' ';
-
-            destination = destination[versionCharsWritten..];
-
-            if (_tag.TryFormat(destination, out var tagCharsWritten, format, provider) == false)
-            {
-                charsWritten = 0;
-                return false;
-            }
-
-            destination[tagCharsWritten++] = ')';
-
-            charsWritten = openQuoteCharsWritten + indexCharsWritten + versionCharsWritten + tagCharsWritten;
-
-#else
-
             destination[versionCharsWritten++] = ')';
 
             charsWritten = openQuoteCharsWritten + indexCharsWritten + versionCharsWritten;
-
-#endif
 
             return true;
         }

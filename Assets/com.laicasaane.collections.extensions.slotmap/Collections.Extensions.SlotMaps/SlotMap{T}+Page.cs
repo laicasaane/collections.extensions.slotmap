@@ -10,14 +10,12 @@ namespace Collections.Extensions.SlotMaps
             private uint _count;
             private uint _tombstoneCount;
 
-            private readonly SlotState[] _states;
-            private readonly SlotVersion[] _versions;
+            private readonly SlotMeta[] _metas;
             private readonly T[] _items;
 
             public Page(uint size)
             {
-                _states= new SlotState[size];
-                _versions = new SlotVersion[size];
+                _metas = new SlotMeta[size];
                 _items = new T[size];
                 _count = 0;
                 _tombstoneCount = 0;
@@ -37,24 +35,31 @@ namespace Collections.Extensions.SlotMaps
 
             public ref T GetRef(uint index, SlotKey key)
             {
-                ref readonly var state = ref _states[index];
+                ref readonly var meta = ref _metas[index];
+
+                Checks.Require(meta.IsValid
+                    , $"Cannot get item because `{nameof(key)}` is pointing to an invalid slot. "
+                    + $"Key value: {key}."
+                );
+
+                var state = meta.State;
 
                 Checks.Require(state != SlotState.Tombstone
-                    , $"Cannot get item because `key` is pointing to a dead slot. "
+                    , $"Cannot get item because `{nameof(key)}` is pointing to a dead slot. "
                     + $"Key value: {key}."
                 );
 
                 Checks.Require(state == SlotState.Occupied
-                    , $"Cannot get item because `key` is pointing to an empty slot. "
+                    , $"Cannot get item because `{nameof(key)}` is pointing to an empty slot. "
                     + $"Key value: {key}."
                 );
 
-                ref readonly var currentVersion = ref _versions[index];
+                var version = meta.Version;
 
-                Checks.Require(currentVersion == key.Version
+                Checks.Require(version == key.Version
                     , $"Cannot get item because `key.{nameof(SlotKey.Version)}` "
                     + $"is different from the current version. "
-                    + $"Key value: {key}. Current version: {currentVersion}. "
+                    + $"Key value: {key}. Current version: {version}. "
                 );
 
                 return ref _items[index];
@@ -62,12 +67,24 @@ namespace Collections.Extensions.SlotMaps
 
             public ref T GetRefNotThrow(uint index, SlotKey key)
             {
-                ref readonly var state = ref _states[index];
+                ref readonly var meta = ref _metas[index];
+
+                if (meta.IsValid == false)
+                {
+                    Checks.Warning(false
+                        , $"Cannot get item because `{nameof(key)}` is pointing to an invalid slot. "
+                        + $"Key value: {key}."
+                    );
+
+                    return ref Unsafe.NullRef<T>();
+                }
+
+                var state = meta.State;
 
                 if (state == SlotState.Tombstone)
                 {
                     Checks.Warning(false
-                        , $"Cannot get item because `key` is pointing to a dead slot. "
+                        , $"Cannot get item because `{nameof(key)}` is pointing to a dead slot. "
                         + $"Key value: {key}."
                     );
 
@@ -77,14 +94,14 @@ namespace Collections.Extensions.SlotMaps
                 if (state == SlotState.Empty)
                 {
                     Checks.Warning(false
-                        , $"Cannot get item because `key` is pointing to an empty slot. "
+                        , $"Cannot get item because `{nameof(key)}` is pointing to an empty slot. "
                         + $"Key value: {key}."
                     );
 
                     return ref Unsafe.NullRef<T>();
                 }
 
-                ref readonly var currentVersion = ref _versions[index];
+                var currentVersion = meta.Version;
 
                 if (currentVersion != key.Version)
                 {
@@ -102,19 +119,20 @@ namespace Collections.Extensions.SlotMaps
 
             public void Add(uint index, SlotKey key, T item)
             {
-                ref var state = ref _states[index];
+                ref var meta = ref _metas[index];
+                var state = meta.State;
 
                 Checks.Require(state != SlotState.Tombstone
-                    , $"Cannot add item because `key` is pointing to a dead slot. "
+                    , $"Cannot add item because `{nameof(key)}` is pointing to a dead slot. "
                     + $"Key value: {key}."
                 );
 
                 Checks.Require(state == SlotState.Empty
-                    , $"Cannot add item because `key` is pointing to an occupied slot. "
+                    , $"Cannot add item because `{nameof(key)}` is pointing to an occupied slot. "
                     + $"Key value: {key}."
                 );
 
-                ref var currentVersion = ref _versions[index];
+                var currentVersion = meta.Version;
                 var version = key.Version;
 
                 Checks.Require(currentVersion < version
@@ -126,18 +144,18 @@ namespace Collections.Extensions.SlotMaps
                 _items[index] = item;
                 _count++;
 
-                state = SlotState.Occupied;
-                currentVersion = version;
+                meta = new(version, SlotState.Occupied);
             }
 
             public bool TryAdd(uint index, SlotKey key, T item)
             {
-                ref var state = ref _states[index];
+                ref var meta = ref _metas[index];
+                var state = meta.State;
 
                 if (state == SlotState.Tombstone)
                 {
                     Checks.Warning(false
-                        , $"Cannot add item because `key` is pointing to a dead slot. "
+                        , $"Cannot add item because `{nameof(key)}` is pointing to a dead slot. "
                         + $"Key value: {key}."
                     );
 
@@ -147,14 +165,14 @@ namespace Collections.Extensions.SlotMaps
                 if (state != SlotState.Empty)
                 {
                     Checks.Warning(false
-                        , $"Cannot add item because `key` is pointing to an occupied slot. "
+                        , $"Cannot add item because `{nameof(key)}` is pointing to an occupied slot. "
                         + $"Key value: {key}."
                     );
 
                     return false;
                 }
 
-                ref var currentVersion = ref _versions[index];
+                var currentVersion = meta.Version;
                 var version = key.Version;
 
                 if (currentVersion >= version)
@@ -171,19 +189,31 @@ namespace Collections.Extensions.SlotMaps
                 _items[index] = item;
                 _count++;
 
-                state = SlotState.Occupied;
-                currentVersion = version;
+                meta = new(version, SlotState.Occupied);
                 return true;
             }
 
             public bool TryReplace(uint index, SlotKey key, T item, out SlotKey newKey)
             {
-                ref var state = ref _states[index];
+                ref var meta = ref _metas[index];
+
+                if (meta.IsValid == false)
+                {
+                    Checks.Warning(false
+                        , $"Cannot replace item because `{nameof(key)}` is pointing to an invalid slot. "
+                        + $"Key value: {key}."
+                    );
+
+                    newKey = default;
+                    return false;
+                }
+
+                var state = meta.State;
 
                 if (state == SlotState.Tombstone)
                 {
                     Checks.Warning(false
-                        , $"Cannot replace item because `key` is pointing to a dead slot. "
+                        , $"Cannot replace item because `{nameof(key)}` is pointing to a dead slot. "
                         + $"Key value: {key}."
                     );
 
@@ -194,7 +224,7 @@ namespace Collections.Extensions.SlotMaps
                 if (state != SlotState.Occupied)
                 {
                     Checks.Warning(false
-                        , $"Cannot replace item because `key` is pointing to an empty slot. "
+                        , $"Cannot replace item because `{nameof(key)}` is pointing to an empty slot. "
                         + $"Key value: {key}."
                     );
 
@@ -202,13 +232,26 @@ namespace Collections.Extensions.SlotMaps
                     return false;
                 }
 
-                ref var currentVersion = ref _versions[index];
+                var currentVersion = meta.Version;
+
+                if (currentVersion >= SlotVersion.MaxValue)
+                {
+                    Checks.Warning(false
+                        , $"Cannot replace item because `key.{nameof(SlotKey.Version)}` "
+                        + $"has reached the maximum limit. "
+                        + $"Key value: {key}. Current version: {currentVersion}."
+                    );
+
+                    newKey = default;
+                    return false;
+                }
+
                 var version = key.Version;
 
                 if (currentVersion != version)
                 {
                     Checks.Warning(false
-                        , $"Cannot add item because `key.{nameof(SlotKey.Version)}` "
+                        , $"Cannot replace item because `key.{nameof(SlotKey.Version)}` "
                         + $"is different from the current version. "
                         + $"Key value: {key}. Current version: {currentVersion}."
                     );
@@ -219,13 +262,26 @@ namespace Collections.Extensions.SlotMaps
 
                 _items[index] = item;
                 currentVersion = version + 1;
+                meta = new(meta, currentVersion);
                 newKey = key.WithVersion(currentVersion);
                 return true;
             }
 
             public bool TryRemove(uint index, SlotKey key)
             {
-                ref var state = ref _states[index];
+                ref var meta = ref _metas[index];
+
+                if (meta.IsValid == false)
+                {
+                    Checks.Warning(false
+                        , $"Cannot remove item because `{nameof(key)}` is pointing to an invalid slot. "
+                        + $"Key value: {key}."
+                    );
+
+                    return false;
+                }
+
+                var state = meta.State;
 
                 if (state == SlotState.Tombstone)
                 {
@@ -247,7 +303,7 @@ namespace Collections.Extensions.SlotMaps
                     return false;
                 }
 
-                ref readonly var currentVersion = ref _versions[index];
+                var currentVersion = meta.Version;
 
                 if (currentVersion != key.Version)
                 {
@@ -265,12 +321,12 @@ namespace Collections.Extensions.SlotMaps
 
                 if (currentVersion == SlotVersion.MaxValue)
                 {
-                    state = SlotState.Tombstone;
+                    meta = new(meta, SlotState.Tombstone);
                     _tombstoneCount++;
                 }
                 else
                 {
-                    state = SlotState.Empty;
+                    meta = new(meta, SlotState.Empty);
                 }
 
                 return true;
@@ -278,20 +334,17 @@ namespace Collections.Extensions.SlotMaps
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public bool Contains(uint index, SlotKey key)
-                => _states[index] == SlotState.Occupied 
-                && _versions[index] == key.Version;
+            {
+                ref readonly var meta = ref _metas[index];
+                return meta.IsValid 
+                    && meta.State == SlotState.Occupied 
+                    && meta.Version == key.Version;
+            }
 
             public void Clear()
             {
-                Array.Clear(_states, 0, _states.Length);
-                Array.Clear(_versions, 0, _versions.Length);
+                Array.Clear(_metas, 0, _metas.Length);
 
-                ClearItems();
-            }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void ClearItems()
-            {
                 if (s_itemIsUnmanaged)
                 {
                     Array.Clear(_items, 0, _items.Length);

@@ -1,52 +1,36 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
 
-#if ENABLE_SLOTMAP_KEY_TAG
-using s_version = System.Int16;
-using u_version = System.UInt16;
-#else
-using s_version = System.Int32;
-using u_version = System.UInt32;
-#endif
-
 namespace Collections.Extensions.SlotMaps
 {
-#if ENABLE_SLOTMAP_KEY_TAG
     /// <summary>
-    /// Represents a 16 bits version in the range [0..65,535].
+    /// Represents a 30 bits version in the range [0..1,073,741,823].
     /// </summary>
-#else
-    /// <summary>
-    /// Represents a 32 bits version in the range [0..4,294,967,295].
-    /// </summary>
-#endif
     public readonly struct SlotVersion
         : IEquatable<SlotVersion>
         , IComparable<SlotVersion>
     {
-#if ENABLE_SLOTMAP_KEY_TAG
-        private const u_version INVALID = 0x_00_00;
-        private const u_version MIN     = 0x_00_01;
-        private const u_version MAX     = 0x_FF_FF;
-#else
-        private const u_version INVALID = 0x_00_00_00_00;
-        private const u_version MIN     = 0x_00_00_00_01;
-        private const u_version MAX     = 0x_FF_FF_FF_FF;
-#endif
+        private const uint INVALID    = 0x_00_00_00_00;
+        private const uint MIN        = 0x_00_00_00_01;
+        private const uint MAX        = 0x_3F_FF_FF_FF;
 
         public static readonly SlotVersion InvalidValue = default;
         public static readonly SlotVersion MinValue = new(MIN);
         public static readonly SlotVersion MaxValue = new(MAX);
 
-        private readonly u_version _raw;
+        private readonly uint _raw;
 
-        public SlotVersion(u_version value)
+        public SlotVersion(uint value)
         {
-            Checks.Require(value != INVALID, $"Version must be greater than or equal to {MIN}");
-            Checks.Warning(value <= MAX, $"Version should be lesser than or equal to {MAX}");
+            Checks.Require(value != INVALID, $"`{nameof(value)}` must be greater than or equal to {MIN}. Value: {value}.");
+            Checks.Warning(value <= MAX, $"`{nameof(value)}` should be lesser than or equal to {MAX}. Value: {value}.");
 
             _raw = Math.Clamp(value, MIN, MAX);
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal static SlotVersion Convert(uint raw)
+            => raw & MAX;
 
         public bool IsValid
         {
@@ -78,7 +62,7 @@ namespace Collections.Extensions.SlotMaps
             => (byte)_raw;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public u_version ToUInt16()
+        public uint ToUInt16()
             => _raw;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -89,19 +73,24 @@ namespace Collections.Extensions.SlotMaps
         public ulong ToUInt64()
             => _raw;
 
-        public bool TryFormat(Span<char> destination, out int charsWritten, ReadOnlySpan<char> format = default, IFormatProvider provider = null)
+        public bool TryFormat(
+              Span<char> destination
+            , out int charsWritten
+            , ReadOnlySpan<char> format = default
+            , IFormatProvider provider = null
+        )
             => _raw.TryFormat(destination, out charsWritten, format, provider);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static implicit operator u_version(SlotVersion value)
+        public static implicit operator uint(SlotVersion value)
             => value._raw;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static implicit operator SlotVersion(s_version value)
-            => new((u_version)value);
+        public static implicit operator SlotVersion(int value)
+            => new((uint)value);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static implicit operator SlotVersion(u_version value)
+        public static implicit operator SlotVersion(uint value)
             => new(value);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -121,7 +110,7 @@ namespace Collections.Extensions.SlotMaps
             => lhs._raw > rhs._raw;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static SlotVersion operator +(SlotVersion lhs, u_version rhs)
-            => (u_version)(lhs._raw + rhs);
+        public static SlotVersion operator +(SlotVersion lhs, uint rhs)
+            => (uint)(lhs._raw + rhs);
     }
 }

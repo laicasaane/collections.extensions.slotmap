@@ -498,13 +498,7 @@ namespace Collections.Extensions.SlotMaps
             if (freeKeys.Count > _freeIndicesLimit)
             {
                 var oldKey = freeKeys.Dequeue();
-
-#if ENABLE_SLOTMAP_KEY_TAG
-                key = oldKey.WithVersion(oldKey.Version + 1).WithTag(default);
-#else
                 key = oldKey.WithVersion(oldKey.Version + 1);
-#endif
-
                 address = SlotAddress.FromIndex(key.Index, pageSize);
                 return true;
             }
