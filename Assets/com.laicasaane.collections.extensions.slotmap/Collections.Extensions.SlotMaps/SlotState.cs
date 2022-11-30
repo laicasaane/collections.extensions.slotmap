@@ -33,7 +33,10 @@ namespace Collections.Extensions.SlotMaps
         {
             Checks.Warning(value <= MAX, $"`{nameof(value)}` should be lesser than or equal to {MAX}. Value: {value}.");
 
-            _raw = Math.Clamp(value, EMPTY, MAX);
+            if (value > MAX)
+                _raw = MAX;
+            else
+                _raw = value;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

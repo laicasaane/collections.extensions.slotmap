@@ -22,10 +22,12 @@ namespace Collections.Extensions.SlotMaps
 
         public SlotVersion(uint value)
         {
-            Checks.Require(value != INVALID, $"`{nameof(value)}` must be greater than or equal to {MIN}. Value: {value}.");
             Checks.Warning(value <= MAX, $"`{nameof(value)}` should be lesser than or equal to {MAX}. Value: {value}.");
 
-            _raw = Math.Clamp(value, MIN, MAX);
+            if (value > MAX)
+                _raw = MAX;
+            else
+                _raw = value;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
