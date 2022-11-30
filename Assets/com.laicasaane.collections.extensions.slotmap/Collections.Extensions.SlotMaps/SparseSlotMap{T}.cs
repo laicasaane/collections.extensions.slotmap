@@ -4,12 +4,8 @@ using System.Runtime.CompilerServices;
 
 namespace Collections.Extensions.SlotMaps
 {
-    public partial class SparseSlotMap<T>
+    public partial class SparseSlotMap<T> : ISlotMap<T>
     {
-        public const int DEFAULT_PAGE_SIZE = 1024;
-        public const int MAX_PAGE_SIZE = 1 << 30;
-        public const int DEFAULT_FREE_INDICES_LITMIT = 32;
-
         private static readonly string s_name = $"{nameof(SparseSlotMap<T>)}<{typeof(T).Name}>";
         private static readonly bool s_itemIsUnmanaged = RuntimeHelpers.IsReferenceOrContainsReferences<T>();
 
@@ -22,6 +18,7 @@ namespace Collections.Extensions.SlotMaps
         private Page[] _pages = Array.Empty<Page>();
         private uint _itemCount;
         private uint _tombstoneCount;
+        private uint _lastDenseIndex;
 
         /// <summary></summary>
         /// <param name="pageSize">
@@ -33,13 +30,13 @@ namespace Collections.Extensions.SlotMaps
         /// <para>Free indices will be reused when their total count exceeds this threshold.</para>
         /// </param>
         public SparseSlotMap(
-              int pageSize = DEFAULT_PAGE_SIZE
-            , int freeIndicesLimit = DEFAULT_FREE_INDICES_LITMIT
+              int pageSize = (int)PowerOfTwo.x1024
+            , int freeIndicesLimit = (int)PowerOfTwo.x32
         )
         {
             Checks.Require(pageSize > 0, $"`{nameof(pageSize)}` must be greater than 0. Page size value: {pageSize}.");
 
-            _pageSize = (uint)Math.Clamp(pageSize, 0, MAX_PAGE_SIZE);
+            _pageSize = (uint)Math.Clamp(pageSize, 0, (int)PowerOfTwo.x1_073_741_824);
             _freeIndicesLimit = (uint)Math.Clamp(freeIndicesLimit, 0, pageSize);
 
             Checks.Require(
@@ -58,8 +55,9 @@ namespace Collections.Extensions.SlotMaps
             _maxPageCount = Utilities.GetMaxPageCount(_pageSize);
             _itemCount = 0;
             _tombstoneCount = 0;
+            _lastDenseIndex = 0;
 
-            TryCreatePage();
+            TryAddPage();
         }
 
         /// <summary></summary>
@@ -71,7 +69,10 @@ namespace Collections.Extensions.SlotMaps
         /// <para>The maximum number of indices that was removed and can be free.</para>
         /// <para>Free indices will be reused when their total count exceeds this threshold.</para>
         /// </param>
-        public SparseSlotMap(PowerOfTwo pageSize = PowerOfTwo.x1024, int freeIndicesLimit = DEFAULT_FREE_INDICES_LITMIT)
+        public SparseSlotMap(
+              PowerOfTwo pageSize = PowerOfTwo.x1024
+            , int freeIndicesLimit = (int)PowerOfTwo.x32
+        )
             : this((int)pageSize, freeIndicesLimit)
         { }
 
@@ -517,15 +518,16 @@ namespace Collections.Extensions.SlotMaps
             }
 
             var pages = _pages;
-            var pageCount = (uint)pages.Length;
-            var lastPageIndex = pageCount - 1;
+            var numberOfPages = (uint)pages.Length;
+            var lastPageIndex = numberOfPages - 1;
 
             ref var lastPage = ref pages[lastPageIndex];
-            var lastPageCount = lastPage.Count;
+            var lastPageItemCount = lastPage.Count;
 
-            if (lastPageCount >= pageSize)
+            // If the last page is full, try adding a new page
+            if (lastPageItemCount >= pageSize)
             {
-                if (pageCount >= _maxPageCount || TryCreatePage() == false)
+                if (TryAddPage() == false)
                 {
                     key = default;
                     address = default;
@@ -533,39 +535,30 @@ namespace Collections.Extensions.SlotMaps
                 }
 
                 lastPageIndex += 1;
-                lastPageCount = 0;
+                lastPageItemCount = 0;
             }
 
-            address = new(lastPageIndex, lastPageCount);
+            address = new(lastPageIndex, lastPageItemCount);
             key = new SlotKey(address.ToIndex(_pageSize));
             return true;
         }
 
-        private bool TryCreatePage()
+        private bool TryAddPage()
         {
-            var oldPages = _pages;
-            var oldLength = oldPages.Length;
-            var maxPageCount = _maxPageCount;
+            var newPageIndex = _pages.Length;
 
-            if (oldLength >= maxPageCount)
+            if (newPageIndex >= _maxPageCount)
             {
+                Checks.Warning(false,
+                      $"Cannot add new page because it has reached "
+                    + $"the maximum limit of {_maxPageCount} pages."
+                );
+
                 return false;
             }
 
-            var newPages = new Page[oldLength + 1];
-
-            if (oldLength > 0)
-            {
-                Array.Copy(oldPages, newPages, oldLength);
-            }
-
-            newPages[oldLength] = new Page((uint)oldLength, _pageSize);
-            _pages = newPages;
-
-            if (s_itemIsUnmanaged && oldLength > 0)
-            {
-                Array.Clear(oldPages, 0, oldLength);
-            }
+            Array.Resize(ref _pages, newPageIndex + 1);
+            _pages[newPageIndex] = new Page((uint)newPageIndex, _pageSize);
 
             return true;
         }

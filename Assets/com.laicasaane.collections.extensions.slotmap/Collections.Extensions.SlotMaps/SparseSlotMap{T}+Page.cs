@@ -7,24 +7,52 @@ namespace Collections.Extensions.SlotMaps
     {
         private struct Page
         {
-            private readonly SlotMeta[] _metas;
+            private readonly SlotMeta[] _sparseMetas;
             private readonly uint[] _sparseIndices;
             private readonly uint[] _denseIndices;
             private readonly T[] _items;
             private readonly uint _pageIndex;
 
             private uint _count;
-            private uint _tombstoneCount;
 
             public Page(uint index, uint size)
             {
-                _metas = new SlotMeta[size];
+                _sparseMetas = new SlotMeta[size];
                 _sparseIndices = new uint[size];
                 _denseIndices = new uint[size];
                 _items = new T[size];
                 _pageIndex = index;
                 _count = 0;
-                _tombstoneCount = 0;
+            }
+
+            public ReadOnlyMemory<SlotMeta> SparseMetas
+            {
+                [MethodImpl(MethodImplOptions.AggressiveInlining)]
+                get => _sparseMetas;
+            }
+
+            public ReadOnlyMemory<T> Items
+            {
+                [MethodImpl(MethodImplOptions.AggressiveInlining)]
+                get => _items;
+            }
+
+            public ReadOnlyMemory<uint> SparseIndices
+            {
+                [MethodImpl(MethodImplOptions.AggressiveInlining)]
+                get => _sparseIndices;
+            }
+
+            public ReadOnlyMemory<uint> DenseIndices
+            {
+                [MethodImpl(MethodImplOptions.AggressiveInlining)]
+                get => _denseIndices;
+            }
+
+            public uint PageIndex
+            {
+                [MethodImpl(MethodImplOptions.AggressiveInlining)]
+                get => _pageIndex;
             }
 
             public uint Count
@@ -33,15 +61,9 @@ namespace Collections.Extensions.SlotMaps
                 get => _count;
             }
 
-            public uint TombstoneCount
-            {
-                [MethodImpl(MethodImplOptions.AggressiveInlining)]
-                get => _tombstoneCount;
-            }
-
             public ref T GetRef(uint index, SlotKey key)
             {
-                ref readonly var meta = ref _metas[index];
+                ref readonly var meta = ref _sparseMetas[index];
 
                 Checks.Require(meta.IsValid
                     , $"Cannot get item because `{nameof(key)}` is pointing to an invalid slot. "
@@ -73,7 +95,7 @@ namespace Collections.Extensions.SlotMaps
 
             public ref T GetRefNotThrow(uint index, SlotKey key)
             {
-                ref readonly var meta = ref _metas[index];
+                ref readonly var meta = ref _sparseMetas[index];
 
                 if (meta.IsValid == false)
                 {
@@ -125,7 +147,7 @@ namespace Collections.Extensions.SlotMaps
 
             public void Add(uint index, SlotKey key, T item)
             {
-                ref var meta = ref _metas[index];
+                ref var meta = ref _sparseMetas[index];
                 var state = meta.State;
 
                 Checks.Require(state != SlotState.Tombstone
@@ -155,7 +177,7 @@ namespace Collections.Extensions.SlotMaps
 
             public bool TryAdd(uint index, SlotKey key, T item)
             {
-                ref var meta = ref _metas[index];
+                ref var meta = ref _sparseMetas[index];
                 var state = meta.State;
 
                 if (state == SlotState.Tombstone)
@@ -201,7 +223,7 @@ namespace Collections.Extensions.SlotMaps
 
             public bool TryReplace(uint index, SlotKey key, T item, out SlotKey newKey)
             {
-                ref var meta = ref _metas[index];
+                ref var meta = ref _sparseMetas[index];
 
                 if (meta.IsValid == false)
                 {
@@ -275,7 +297,7 @@ namespace Collections.Extensions.SlotMaps
 
             public bool TryRemove(uint index, SlotKey key)
             {
-                ref var meta = ref _metas[index];
+                ref var meta = ref _sparseMetas[index];
 
                 if (meta.IsValid == false)
                 {
@@ -325,15 +347,10 @@ namespace Collections.Extensions.SlotMaps
                 _items[index] = default;
                 _count -= 1;
 
-                if (currentVersion == SlotVersion.MaxValue)
-                {
-                    meta = new(meta, SlotState.Tombstone);
-                    _tombstoneCount++;
-                }
-                else
-                {
-                    meta = new(meta, SlotState.Empty);
-                }
+                meta = currentVersion == SlotVersion.MaxValue
+                    ? new(meta, SlotState.Tombstone)
+                    : new(meta, SlotState.Empty)
+                    ;
 
                 return true;
             }
@@ -341,7 +358,7 @@ namespace Collections.Extensions.SlotMaps
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public bool Contains(uint index, SlotKey key)
             {
-                ref readonly var meta = ref _metas[index];
+                ref readonly var meta = ref _sparseMetas[index];
                 return meta.IsValid
                     && meta.State == SlotState.Occupied
                     && meta.Version == key.Version;
@@ -349,7 +366,7 @@ namespace Collections.Extensions.SlotMaps
 
             public void Clear()
             {
-                Array.Clear(_metas, 0, _metas.Length);
+                Array.Clear(_sparseMetas, 0, _sparseMetas.Length);
 
                 if (s_itemIsUnmanaged)
                 {
