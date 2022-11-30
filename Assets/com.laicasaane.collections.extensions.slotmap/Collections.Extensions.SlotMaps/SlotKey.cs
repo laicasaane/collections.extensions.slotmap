@@ -95,7 +95,12 @@ namespace Collections.Extensions.SlotMaps
         public override string ToString()
             => $"({_index}, {_version})";
 
-        public bool TryFormat(Span<char> destination, out int charsWritten, ReadOnlySpan<char> format = default, IFormatProvider provider = null)
+        public bool TryFormat(
+              Span<char> destination
+            , out int charsWritten
+            , ReadOnlySpan<char> format = default
+            , IFormatProvider provider = null
+        )
         {
             var openQuoteCharsWritten = 0;
             destination[openQuoteCharsWritten++] = '(';

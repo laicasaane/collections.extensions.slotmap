@@ -70,11 +70,46 @@ namespace Collections.Extensions.SlotMaps
         public override string ToString()
         {
             return _raw switch {
-                  EMPTY => nameof(Empty)
-                , OCCUPIED => nameof(Occupied)
-                , TOMBSTONE => nameof(Tombstone)
-                , _ => _raw.ToString()
+                EMPTY => nameof(Empty),
+                OCCUPIED => nameof(Occupied),
+                TOMBSTONE => nameof(Tombstone),
+                _ => _raw.ToString(),
             };
+        }
+
+        public bool TryFormat(
+              Span<char> destination
+            , out int charsWritten
+            , ReadOnlySpan<char> format = default
+            , IFormatProvider provider = null
+        )
+        {
+            var valueStr = _raw switch {
+                EMPTY => nameof(Empty),
+                OCCUPIED => nameof(Occupied),
+                TOMBSTONE => nameof(Tombstone),
+                _ => string.Empty,
+            };
+
+            var valueSpan = valueStr.AsSpan();
+            var length = valueSpan.Length;
+
+            if (length <= 0)
+            {
+                return _raw.TryFormat(destination, out charsWritten, format, provider);
+            }
+
+            try
+            {
+                valueSpan.CopyTo(destination[..length]);
+                charsWritten = length;
+                return true;
+            }
+            catch
+            {
+                charsWritten = 0;
+                return false;
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -81,7 +81,9 @@ namespace Collections.Extensions.SlotMaps
             , ReadOnlySpan<char> format = default
             , IFormatProvider provider = null
         )
-            => _raw.TryFormat(destination, out charsWritten, format, provider);
+        {
+            return _raw.TryFormat(destination, out charsWritten, format, provider);
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static implicit operator uint(SlotVersion value)
