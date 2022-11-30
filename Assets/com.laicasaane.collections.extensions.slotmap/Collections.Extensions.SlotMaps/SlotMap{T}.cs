@@ -59,7 +59,7 @@ namespace Collections.Extensions.SlotMaps
             _itemCount = 0;
             _tombstoneCount = 0;
 
-            TryCreatePage();
+            TryAddPage();
         }
 
         /// <summary></summary>
@@ -517,15 +517,16 @@ namespace Collections.Extensions.SlotMaps
             }
 
             var pages = _pages;
-            var pageCount = (uint)pages.Length;
-            var lastPageIndex = pageCount - 1;
+            var numberOfPages = (uint)pages.Length;
+            var lastPageIndex = numberOfPages - 1;
 
             ref var lastPage = ref pages[lastPageIndex];
-            var lastPageCount = lastPage.Count;
+            var lastPageItemCount = lastPage.Count;
 
-            if (lastPageCount >= pageSize)
+            // If the last page is full, try adding a new page
+            if (lastPageItemCount >= pageSize)
             {
-                if (pageCount >= _maxPageCount || TryCreatePage() == false)
+                if (TryAddPage() == false)
                 {
                     key = default;
                     address = default;
@@ -533,39 +534,30 @@ namespace Collections.Extensions.SlotMaps
                 }
 
                 lastPageIndex += 1;
-                lastPageCount = 0;
+                lastPageItemCount = 0;
             }
 
-            address = new(lastPageIndex, lastPageCount);
+            address = new(lastPageIndex, lastPageItemCount);
             key = new SlotKey(address.ToIndex(_pageSize));
             return true;
         }
 
-        private bool TryCreatePage()
+        private bool TryAddPage()
         {
-            var oldPages = _pages;
-            var oldLength = oldPages.Length;
-            var maxPageCount = _maxPageCount;
+            var newPageIndex = _pages.Length;
 
-            if (oldLength >= maxPageCount)
+            if (newPageIndex >= _maxPageCount)
             {
+                Checks.Warning(false,
+                      $"Cannot add new page because it has reached "
+                    + $"the maximum limit of {_maxPageCount} pages."
+                );
+
                 return false;
             }
 
-            var newPages = new Page[oldLength + 1];
-
-            if (oldLength > 0)
-            {
-                Array.Copy(oldPages, newPages, oldLength);
-            }
-
-            newPages[oldLength] = new Page(_pageSize);
-            _pages = newPages;
-
-            if (s_itemIsUnmanaged && oldLength > 0)
-            {
-                Array.Clear(oldPages, 0, oldLength);
-            }
+            Array.Resize(ref _pages, newPageIndex + 1);
+            _pages[newPageIndex] = new Page(_pageSize);
 
             return true;
         }
