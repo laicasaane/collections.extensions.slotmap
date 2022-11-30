@@ -11,26 +11,18 @@ namespace Collections.Extensions.SlotMaps
             private readonly T[] _items;
 
             private uint _count;
-            private uint _tombstoneCount;
 
             public Page(uint size)
             {
                 _metas = new SlotMeta[size];
                 _items = new T[size];
                 _count = 0;
-                _tombstoneCount = 0;
             }
 
             public uint Count
             {
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
                 get => _count;
-            }
-
-            public uint TombstoneCount
-            {
-                [MethodImpl(MethodImplOptions.AggressiveInlining)]
-                get => _tombstoneCount;
             }
 
             public ref T GetRef(uint index, SlotKey key)
@@ -319,15 +311,10 @@ namespace Collections.Extensions.SlotMaps
                 _items[index] = default;
                 _count -= 1;
 
-                if (currentVersion == SlotVersion.MaxValue)
-                {
-                    meta = new(meta, SlotState.Tombstone);
-                    _tombstoneCount++;
-                }
-                else
-                {
-                    meta = new(meta, SlotState.Empty);
-                }
+                meta = currentVersion == SlotVersion.MaxValue
+                    ? new(meta, SlotState.Tombstone)
+                    : new(meta, SlotState.Empty)
+                    ;
 
                 return true;
             }

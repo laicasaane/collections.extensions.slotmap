@@ -4,12 +4,8 @@ using System.Runtime.CompilerServices;
 
 namespace Collections.Extensions.SlotMaps
 {
-    public partial class SlotMap<T>
+    public partial class SlotMap<T> : ISlotMap<T>
     {
-        public const int DEFAULT_PAGE_SIZE = 1024;
-        public const int MAX_PAGE_SIZE = 1 << 30;
-        public const int DEFAULT_FREE_INDICES_LITMIT = 32;
-
         private static readonly string s_name = $"{nameof(SlotMap<T>)}<{typeof(T).Name}>";
         private static readonly bool s_itemIsUnmanaged = RuntimeHelpers.IsReferenceOrContainsReferences<T>();
 
@@ -33,13 +29,13 @@ namespace Collections.Extensions.SlotMaps
         /// <para>Free indices will be reused when their total count exceeds this threshold.</para>
         /// </param>
         public SlotMap(
-              int pageSize = DEFAULT_PAGE_SIZE
-            , int freeIndicesLimit = DEFAULT_FREE_INDICES_LITMIT
+              int pageSize = (int)PowerOfTwo.x1024
+            , int freeIndicesLimit = (int)PowerOfTwo.x32
         )
         {
             Checks.Require(pageSize > 0, $"`{nameof(pageSize)}` must be greater than 0. Page size value: {pageSize}.");
 
-            _pageSize = (uint)Math.Clamp(pageSize, 0, MAX_PAGE_SIZE);
+            _pageSize = (uint)Math.Clamp(pageSize, 0, (int)PowerOfTwo.x1_073_741_824);
             _freeIndicesLimit = (uint)Math.Clamp(freeIndicesLimit, 0, pageSize);
 
             Checks.Require(
@@ -71,7 +67,10 @@ namespace Collections.Extensions.SlotMaps
         /// <para>The maximum number of indices that was removed and can be free.</para>
         /// <para>Free indices will be reused when their total count exceeds this threshold.</para>
         /// </param>
-        public SlotMap(PowerOfTwo pageSize = PowerOfTwo.x1024, int freeIndicesLimit = DEFAULT_FREE_INDICES_LITMIT)
+        public SlotMap(
+              PowerOfTwo pageSize = PowerOfTwo.x1024
+            , int freeIndicesLimit = (int)PowerOfTwo.x32
+        )
             : this((int)pageSize, freeIndicesLimit)
         { }
 
@@ -320,7 +319,7 @@ namespace Collections.Extensions.SlotMaps
             }
 
             ref var page = ref _pages[address.PageIndex];
-            
+
             if (page.TryAdd(address.ItemIndex, key, item))
             {
                 _itemCount++;
