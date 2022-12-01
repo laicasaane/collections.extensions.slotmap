@@ -138,9 +138,8 @@ namespace Collections.Extensions.SlotMaps
                 );
 
                 _items[index] = item;
-                _count++;
-
                 meta = new(version, SlotState.Occupied);
+                _count++;
             }
 
             public bool TryAdd(uint index, SlotKey key, T item)
@@ -183,10 +182,50 @@ namespace Collections.Extensions.SlotMaps
                 }
 
                 _items[index] = item;
-                _count++;
-
                 meta = new(version, SlotState.Occupied);
+                _count++;
                 return true;
+            }
+
+            internal SlotKey Replace(uint index, SlotKey key, T item)
+            {
+                ref var meta = ref _metas[index];
+
+                Checks.Require(meta.IsValid == true
+                    , $"Cannot replace item because `{nameof(key)}` is pointing to an invalid slot. "
+                    + $"Key value: {key}."
+                );
+
+                Checks.Require(meta.State != SlotState.Tombstone
+                    , $"Cannot replace item because `{nameof(key)}` is pointing to a dead slot. "
+                    + $"Key value: {key}."
+                );
+
+                Checks.Require(meta.State == SlotState.Occupied
+                    , $"Cannot replace item because `{nameof(key)}` is pointing to an empty slot. "
+                    + $"Key value: {key}."
+                );
+
+                var currentVersion = meta.Version;
+
+                Checks.Require(currentVersion < SlotVersion.MaxValue
+                    , $"Cannot replace item because `key.{nameof(SlotKey.Version)}` "
+                    + $"has reached the maximum limit. "
+                    + $"Key value: {key}. Current version: {currentVersion}."
+                );
+
+                var version = key.Version;
+
+                Checks.Require(currentVersion == version
+                    , $"Cannot replace item because `key.{nameof(SlotKey.Version)}` "
+                    + $"is different from the current version. "
+                    + $"Key value: {key}. Current version: {currentVersion}."
+                );
+
+                _items[index] = item;
+                currentVersion = version + 1;
+                meta = new(meta, currentVersion);
+                return key.WithVersion(currentVersion);
             }
 
             internal bool TryReplace(uint index, SlotKey key, T item, out SlotKey newKey)
@@ -263,7 +302,7 @@ namespace Collections.Extensions.SlotMaps
                 return true;
             }
 
-            internal bool TryRemove(uint index, SlotKey key)
+            internal bool Remove(uint index, SlotKey key)
             {
                 ref var meta = ref _metas[index];
 
@@ -286,7 +325,7 @@ namespace Collections.Extensions.SlotMaps
                         + $"Key value: {key}."
                     );
 
-                    return true;
+                    return false;
                 }
 
                 if (state != SlotState.Occupied)
@@ -313,13 +352,12 @@ namespace Collections.Extensions.SlotMaps
                 }
 
                 _items[index] = default;
-                _count -= 1;
-
                 meta = currentVersion == SlotVersion.MaxValue
                     ? new(meta, SlotState.Tombstone)
                     : new(meta, SlotState.Empty)
                     ;
 
+                _count -= 1;
                 return true;
             }
 

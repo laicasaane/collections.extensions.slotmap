@@ -2,7 +2,7 @@
 
 namespace Collections.Extensions.SlotMaps
 {
-    public static class Utilities
+    public static class Utils
     {
         /// <summary>
         /// Gets the maximum number of elements that may be contained in an array.
