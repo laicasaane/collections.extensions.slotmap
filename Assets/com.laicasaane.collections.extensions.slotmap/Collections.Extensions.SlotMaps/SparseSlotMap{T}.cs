@@ -15,7 +15,8 @@ namespace Collections.Extensions.SlotMaps
 
         private readonly Queue<SlotKey> _freeKeys = new();
 
-        private Page[] _pages = Array.Empty<Page>();
+        private SparsePage[] _sparsePages = Array.Empty<SparsePage>();
+        private DensePage[] _densePages = Array.Empty<DensePage>();
         private uint _itemCount;
         private uint _tombstoneCount;
         private uint _lastDenseIndex;
@@ -101,7 +102,7 @@ namespace Collections.Extensions.SlotMaps
         public int PageCount
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get => _pages.Length;
+            get => _sparsePages.Length;
         }
 
         /// <summary>
@@ -262,10 +263,10 @@ namespace Collections.Extensions.SlotMaps
 
         public SlotKey Add(T item)
         {
-            if (TryGetNewKey(out var key, out var address))
+            if (TryGetNewKey(out var key, out var sparseAddress, out var denseAddress))
             {
-                ref var page = ref _pages[address.PageIndex];
-                page.Add(address.ItemIndex, key, item);
+                ref var page = ref _pages[sparseAddress.PageIndex];
+                page.Add(sparseAddress.ItemIndex, key, item);
 
                 _itemCount++;
                 return key;
@@ -294,10 +295,10 @@ namespace Collections.Extensions.SlotMaps
             {
                 ref readonly var item = ref items[i];
 
-                if (TryGetNewKey(out var key, out var address))
+                if (TryGetNewKey(out var key, out var sparseAddress, out var denseAddress))
                 {
-                    ref var page = ref pages[address.PageIndex];
-                    page.Add(address.ItemIndex, key, item);
+                    ref var page = ref pages[sparseAddress.PageIndex];
+                    page.Add(sparseAddress.ItemIndex, key, item);
 
                     itemCount++;
 
@@ -314,15 +315,15 @@ namespace Collections.Extensions.SlotMaps
 
         public bool TryAdd(T item, out SlotKey key)
         {
-            if (TryGetNewKey(out key, out var address) == false)
+            if (TryGetNewKey(out key, out var sparseAddress, out var denseAddress) == false)
             {
                 Checks.Warning(false, $"Cannot add `{nameof(item)}` to {s_name}. Item value: {item}.");
                 return false;
             }
 
-            ref var page = ref _pages[address.PageIndex];
+            ref var page = ref _pages[sparseAddress.PageIndex];
 
-            if (page.TryAdd(address.ItemIndex, key, item))
+            if (page.TryAdd(sparseAddress.ItemIndex, key, item))
             {
                 _itemCount++;
                 return true;
@@ -353,7 +354,7 @@ namespace Collections.Extensions.SlotMaps
             {
                 ref readonly var item = ref items[i];
 
-                if (TryGetNewKey(out var key, out var address) == false)
+                if (TryGetNewKey(out var key, out var sparseAddress, out var denseAddress) == false)
                 {
                     Checks.Warning(false
                         , $"Cannot add `{nameof(item)}` to {s_name} at index {i}. Item value: {item}."
@@ -361,9 +362,9 @@ namespace Collections.Extensions.SlotMaps
                     continue;
                 }
 
-                ref var page = ref pages[address.PageIndex];
+                ref var page = ref pages[sparseAddress.PageIndex];
 
-                if (page.TryAdd(address.ItemIndex, key, item))
+                if (page.TryAdd(sparseAddress.ItemIndex, key, item))
                 {
                     itemCount++;
 
@@ -489,35 +490,42 @@ namespace Collections.Extensions.SlotMaps
         /// </summary>
         public void Reset()
         {
-            var pages = _pages;
-            var length = (uint)pages.Length;
+            var sparsePages = _sparsePages;
+            var densePages = _densePages;
+            var length = (uint)sparsePages.Length;
 
             if (length > 0)
             {
-                pages[0].Clear();
-                _pages = new Page[1] {
-                    pages[0]
+                _sparsePages = new SparsePage[1] {
+                    sparsePages[0]
                 };
+
+                _densePages = new DensePage[1] {
+                    densePages[0]
+                };
+
+                _sparsePages[0].Clear();
+                _densePages[0].Clear();
             }
 
             _itemCount = 0;
             _tombstoneCount = 0;
+            _lastDenseIndex = 0;
         }
 
-        private bool TryGetNewKey(out SlotKey key, out SlotAddress address)
+        private bool TryGetNewKey(
+              out SlotKey key
+            , out SlotAddress sparseAddress
+            , out SlotAddress denseAddress
+        )
         {
-            var pageSize = _pageSize;
-            var freeKeys = _freeKeys;
-
-            if (freeKeys.Count > _freeIndicesLimit)
+            if (TryReuseFreeKey(out key, out sparseAddress, out denseAddress))
             {
-                var oldKey = freeKeys.Dequeue();
-                key = oldKey.WithVersion(oldKey.Version + 1);
-                address = SlotAddress.FromIndex(key.Index, pageSize);
                 return true;
             }
 
-            var pages = _pages;
+            var pageSize = _pageSize;
+            var pages = _sparsePages;
             var numberOfPages = (uint)pages.Length;
             var lastPageIndex = numberOfPages - 1;
 
@@ -529,8 +537,7 @@ namespace Collections.Extensions.SlotMaps
             {
                 if (TryAddPage() == false)
                 {
-                    key = default;
-                    address = default;
+                    SetDefault(out key, out sparseAddress, out denseAddress);
                     return false;
                 }
 
@@ -538,14 +545,37 @@ namespace Collections.Extensions.SlotMaps
                 lastPageItemCount = 0;
             }
 
-            address = new(lastPageIndex, lastPageItemCount);
-            key = new SlotKey(address.ToIndex(_pageSize));
+            sparseAddress = new(lastPageIndex, lastPageItemCount);
+            key = new SlotKey(sparseAddress.ToIndex(_pageSize));
+            denseAddress = SlotAddress.FromIndex(_lastDenseIndex + 1, pageSize);
+            return true;
+        }
+
+        private bool TryReuseFreeKey(
+              out SlotKey key
+            , out SlotAddress sparseAddress
+            , out SlotAddress denseAddress
+        )
+        {
+            var pageSize = _pageSize;
+            var freeKeys = _freeKeys;
+
+            if (freeKeys.Count <= _freeIndicesLimit)
+            {
+                SetDefault(out key, out sparseAddress, out denseAddress);
+                return false;
+            }
+
+            var oldKey = freeKeys.Dequeue();
+            key = oldKey.WithVersion(oldKey.Version + 1);
+            sparseAddress = SlotAddress.FromIndex(key.Index, pageSize);
+            denseAddress = SlotAddress.FromIndex(_lastDenseIndex + 1, pageSize);
             return true;
         }
 
         private bool TryAddPage()
         {
-            var newPageIndex = _pages.Length;
+            var newPageIndex = _sparsePages.Length;
 
             if (newPageIndex >= _maxPageCount)
             {
@@ -557,10 +587,28 @@ namespace Collections.Extensions.SlotMaps
                 return false;
             }
 
-            Array.Resize(ref _pages, newPageIndex + 1);
-            _pages[newPageIndex] = new Page((uint)newPageIndex, _pageSize);
+            var newPageLength = newPageIndex + 1;
+
+            Array.Resize(ref _sparsePages, newPageLength);
+            Array.Resize(ref _densePages, newPageLength);
+
+
+            _sparsePages[newPageIndex] = new SparsePage(_pageSize);
+            _densePages[newPageIndex] = new DensePage(_pageSize);
 
             return true;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void SetDefault(
+              out SlotKey key
+            , out SlotAddress sparseAddress
+            , out SlotAddress denseAddress
+        )
+        {
+            key = default;
+            sparseAddress = default;
+            denseAddress = default;
         }
     }
 }
