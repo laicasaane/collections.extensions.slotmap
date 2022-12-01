@@ -12,7 +12,7 @@ namespace Project.Runtime
         {
             const int MAX_INDEX = 63;
 
-            var slotmap = new SlotMap<string>(32);
+            var slotmap = new SparseSlotMap<string>(32);
             var slotkeys = new SlotKey[MAX_INDEX + 1];
 
             foreach (var i in 0..MAX_INDEX)
@@ -42,11 +42,40 @@ namespace Project.Runtime
                 }
             }
 
-            foreach (var i in 0..RANDOM_MAX_INDEX)
-            {
-                var randomKey = randomKeys[i];
+            Debug.Log("SPARSE PAGES");
 
-                Debug.Log($"Contains `{randomKey}` = {slotmap.Contains(randomKey)}");
+            var sparsePages = slotmap.SparsePages.Span;
+            var sparseLength = sparsePages.Length;
+
+            for (var i = 0; i < sparseLength; i++)
+            {
+                ref readonly var page = ref sparsePages[i];
+                var metas = page.Metas.Span;
+                var denseIndices = page.DenseIndices.Span;
+                var length = metas.Length;
+
+                for (var k = 0; k < length; k++)
+                {
+                    Debug.Log($"{metas[k]} == {denseIndices[k]}");
+                }
+            }
+
+            Debug.Log("DENSE PAGES");
+
+            var densePages = slotmap.DensePages.Span;
+            var denseLength = densePages.Length;
+
+            for (var i = 0; i < denseLength; i++)
+            {
+                ref readonly var page = ref densePages[i];
+                var sparseIndices = page.SparseIndices.Span;
+                var items = page.Items.Span;
+                var length = sparseIndices.Length;
+
+                for (var k = 0; k < length; k++)
+                {
+                    Debug.Log($"{sparseIndices[k]} == {items[k]}");
+                }
             }
         }
     }

@@ -19,7 +19,7 @@ namespace Collections.Extensions.SlotMaps
         private DensePage[] _densePages = Array.Empty<DensePage>();
         private uint _itemCount;
         private uint _tombstoneCount;
-        private uint _lastDenseIndex;
+        private int _lastDenseIndex;
 
         /// <summary></summary>
         /// <param name="pageSize">
@@ -41,7 +41,7 @@ namespace Collections.Extensions.SlotMaps
             _freeIndicesLimit = (uint)Math.Clamp(freeIndicesLimit, 0, pageSize);
 
             Checks.Require(
-                  Utilities.IsPowerOfTwo(_pageSize)
+                  Utils.IsPowerOfTwo(_pageSize)
                 , $"`{nameof(pageSize)}` must be a power of two. Page size value: {_pageSize}."
             );
 
@@ -53,10 +53,10 @@ namespace Collections.Extensions.SlotMaps
                 + $"Free indices limit value: {_freeIndicesLimit}."
             );
 
-            _maxPageCount = Utilities.GetMaxPageCount(_pageSize);
+            _maxPageCount = Utils.GetMaxPageCount(_pageSize);
             _itemCount = 0;
             _tombstoneCount = 0;
-            _lastDenseIndex = 0;
+            _lastDenseIndex = -1;
 
             TryAddPage();
         }
@@ -123,20 +123,37 @@ namespace Collections.Extensions.SlotMaps
             get => _tombstoneCount;
         }
 
+        public ReadOnlyMemory<SparsePage> SparsePages
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => _sparsePages;
+        }
+
+        public ReadOnlyMemory<DensePage> DensePages
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => _densePages;
+        }
+
         public T Get(SlotKey key)
         {
-            if (Utilities.FindAddress(_pages.Length, _pageSize, key, out var address))
+            var pageSize = _pageSize;
+            var sparsePages = _sparsePages;
+
+            if (Utils.FindAddress(sparsePages.Length, pageSize, key, out var sparseAddress) == false)
             {
-                ref var page = ref _pages[address.PageIndex];
-                return page.GetRef(address.ItemIndex, key);
+                throw new SlotMapException($"Cannot find address for `{nameof(key)}`. Key value: {key}.");
             }
 
-            throw new SlotMapException($"Cannot find address for `{nameof(key)}`. Key value: {key}.");
+            ref var sparsePage = ref sparsePages[sparseAddress.PageIndex];
+            var denseIndex = sparsePage.GetDenseIndex(sparseAddress.ItemIndex, key);
+            var denseAddress = SlotAddress.FromIndex(denseIndex, pageSize);
+            return _densePages[denseAddress.PageIndex].GetRef(denseAddress.ItemIndex);
         }
 
         public void GetRange(
               in ReadOnlySpan<SlotKey> keys
-            , in Span<T> returnItems
+            , Span<T> returnItems
         )
         {
             Checks.Require(
@@ -145,8 +162,9 @@ namespace Collections.Extensions.SlotMaps
                 + $"or equal to the length of `{nameof(keys)}`."
             );
 
-            var pages = _pages;
-            var pageLength = pages.Length;
+            var sparsePages = _sparsePages;
+            var densePages = _densePages;
+            var pageLength = sparsePages.Length;
             var pageSize = _pageSize;
             var length = keys.Length;
 
@@ -154,130 +172,171 @@ namespace Collections.Extensions.SlotMaps
             {
                 ref readonly var key = ref keys[i];
 
-                if (Utilities.FindAddress(pageLength, pageSize, key, out var address))
-                {
-                    ref var page = ref pages[address.PageIndex];
-                    returnItems[i] = page.GetRef(address.ItemIndex, key);
-                }
-                else
+                if (Utils.FindAddress(pageLength, pageSize, key, out var sparseAddress) == false)
                 {
                     throw new SlotMapException(
                         $"Cannot find address for `{nameof(key)}` at index {i}. Key value: {key}."
                     );
                 }
+
+                ref var sparsePage = ref sparsePages[sparseAddress.PageIndex];
+                var denseIndex = sparsePage.GetDenseIndex(sparseAddress.ItemIndex, key);
+                var denseAddress = SlotAddress.FromIndex(denseIndex, pageSize);
+                returnItems[i] = densePages[denseAddress.PageIndex].GetRef(denseAddress.ItemIndex);
             }
         }
 
         public ref readonly T GetRef(SlotKey key)
         {
-            if (Utilities.FindAddress(_pages.Length, _pageSize, key, out var address))
+            var pageSize = _pageSize;
+            var sparsePages = _sparsePages;
+
+            if (Utils.FindAddress(sparsePages.Length, pageSize, key, out var sparseAddress) == false)
             {
-                ref var page = ref _pages[address.PageIndex];
-                return ref page.GetRef(address.ItemIndex, key);
+                throw new SlotMapException($"Cannot find address for `{nameof(key)}`. Key value: {key}.");
             }
 
-            throw new SlotMapException($"Cannot find address for `{nameof(key)}`. Key value: {key}.");
+            ref var sparsePage = ref sparsePages[sparseAddress.PageIndex];
+            var denseIndex = sparsePage.GetDenseIndex(sparseAddress.ItemIndex, key);
+            var denseAddress = SlotAddress.FromIndex(denseIndex, pageSize);
+            return ref _densePages[denseAddress.PageIndex].GetRef(denseAddress.ItemIndex);
         }
 
         public ref readonly T GetRefNotThrow(SlotKey key)
         {
-            if (Utilities.FindAddress(_pages.Length, _pageSize, key, out var address))
+            var pageSize = _pageSize;
+            var sparsePages = _sparsePages;
+
+            if (Utils.FindAddress(sparsePages.Length, pageSize, key, out var sparseAddress) == false)
             {
-                ref var page = ref _pages[address.PageIndex];
-                return ref page.GetRefNotThrow(address.ItemIndex, key);
+                Checks.Warning(false, $"Cannot find address for `{nameof(key)}`. Key value: {key}.");
+                return ref Unsafe.NullRef<T>();
             }
 
-            return ref Unsafe.NullRef<T>();
+            ref var sparsePage = ref sparsePages[sparseAddress.PageIndex];
+
+            if (sparsePage.TryGetDenseIndex(sparseAddress.ItemIndex, key, out var denseIndex) == false)
+            {
+                return ref Unsafe.NullRef<T>();
+            }
+
+            var denseAddress = SlotAddress.FromIndex(denseIndex, pageSize);
+            return ref _densePages[denseAddress.PageIndex].GetRef(denseAddress.ItemIndex);
         }
 
         public bool TryGet(SlotKey key, out T item)
         {
-            if (Utilities.FindAddress(_pages.Length, _pageSize, key, out var address) == false)
+            var pageSize = _pageSize;
+            var sparsePages = _sparsePages;
+
+            if (Utils.FindAddress(sparsePages.Length, pageSize, key, out var sparseAddress) == false)
+            {
+                Checks.Warning(false, $"Cannot find address for `{nameof(key)}`. Key value: {key}.");
+                item = default;
+                return false;
+            }
+
+            ref var sparsePage = ref sparsePages[sparseAddress.PageIndex];
+
+            if (sparsePage.TryGetDenseIndex(sparseAddress.ItemIndex, key, out var denseIndex) == false)
             {
                 item = default;
                 return false;
             }
 
-            ref var page = ref _pages[address.PageIndex];
-            ref var itemRef = ref page.GetRefNotThrow(address.ItemIndex, key);
-
-            if (Unsafe.IsNullRef<T>(ref itemRef))
-            {
-                item = default;
-                return false;
-            }
-
-            item = itemRef;
+            var denseAddress = SlotAddress.FromIndex(denseIndex, pageSize);
+            item = _densePages[denseAddress.PageIndex].GetRef(denseAddress.ItemIndex);
             return true;
         }
 
-        public void TryGetRange(
+        public bool TryGetRange(
               in ReadOnlySpan<SlotKey> keys
-            , in Span<SlotKey> returnKeys
-            , in Span<T> returnItems
-            , out uint returnCount
+            , Span<SlotKey> returnKeys
+            , Span<T> returnItems
+            , out uint returnItemCount
         )
         {
-            Checks.Require(
-                  returnKeys.Length >= keys.Length
-                , $"The length `{nameof(returnKeys)}` must be greater than "
-                + $"or equal to the length of `{nameof(keys)}`."
-            );
+            if (returnKeys.Length < keys.Length)
+            {
+                Checks.Warning(false
+                    , $"The length `{nameof(returnKeys)}` must be greater than "
+                    + $"or equal to the length of `{nameof(keys)}`."
+                );
 
-            Checks.Require(
-                  returnItems.Length >= keys.Length
-                , $"The length `{nameof(returnItems)}` must be greater than "
-                + $"or equal to the length of `{nameof(keys)}`."
-            );
+                returnItemCount = 0;
+                return false;
+            }
 
-            var pages = _pages;
-            var pageLength = pages.Length;
+            if (returnItems.Length < keys.Length)
+            {
+                Checks.Warning(false
+                    , $"The length `{nameof(returnItems)}` must be greater than "
+                    + $"or equal to the length of `{nameof(keys)}`."
+                );
+
+                returnItemCount = 0;
+                return false;
+            }
+
+            var sparsePages = _sparsePages;
+            var densePages = _densePages;
+            var pageLength = sparsePages.Length;
             var pageSize = _pageSize;
             var length = keys.Length;
-            var destIndex = 0;
+            var returnIndex = 0;
 
             for (var i = 0; i < length; i++)
             {
                 ref readonly var key = ref keys[i];
 
-                if (Utilities.FindAddress(pageLength, pageSize, key, out var address) == false)
+                if (Utils.FindAddress(pageLength, pageSize, key, out var sparseAddress) == false)
+                {
+                    Checks.Warning(false, $"Cannot find address for `{nameof(key)}`. Key value: {key}.");
+                    continue;
+                }
+
+                ref var sparsePage = ref sparsePages[sparseAddress.PageIndex];
+
+                if (sparsePage.TryGetDenseIndex(sparseAddress.ItemIndex, key, out var denseIndex) == false)
                 {
                     continue;
                 }
 
-                ref var page = ref pages[address.PageIndex];
-                ref var itemRef = ref page.GetRefNotThrow(address.ItemIndex, key);
+                var denseAddress = SlotAddress.FromIndex(denseIndex, pageSize);
 
-                if (Unsafe.IsNullRef<T>(ref itemRef))
-                {
-                    continue;
-                }
+                returnKeys[returnIndex] = key;
+                returnItems[returnIndex] = densePages[denseAddress.PageIndex].GetRef(denseAddress.ItemIndex);
 
-                returnKeys[destIndex] = key;
-                returnItems[destIndex] = itemRef;
-                destIndex++;
+                returnIndex++;
             }
 
-            returnCount = (uint)destIndex;
+            returnItemCount = (uint)returnIndex;
+            return true;
         }
 
         public SlotKey Add(T item)
         {
-            if (TryGetNewKey(out var key, out var sparseAddress, out var denseAddress))
+            if (TryGetNewKey(out var key, out var sparseAddress, out var denseIndex) == false)
             {
-                ref var page = ref _pages[sparseAddress.PageIndex];
-                page.Add(sparseAddress.ItemIndex, key, item);
-
-                _itemCount++;
-                return key;
+                throw new SlotMapException($"Cannot add `{nameof(item)}` to {s_name}. Item value: {item}.");
             }
 
-            throw new SlotMapException($"Cannot add `{nameof(item)}` to {s_name}. Item value: {item}.");
+            ref var sparsePage = ref _sparsePages[sparseAddress.PageIndex];
+            sparsePage.Add(sparseAddress.ItemIndex, key, denseIndex);
+
+            var pageSize = _pageSize;
+            var denseAddress = SlotAddress.FromIndex(denseIndex, pageSize);
+            ref var densePage = ref _densePages[denseAddress.PageIndex];
+            densePage.Add(denseAddress.ItemIndex, sparseAddress.ToIndex(pageSize), item);
+
+            _lastDenseIndex++;
+            _itemCount++;
+            return key;
         }
 
         public void AddRange(
               in ReadOnlySpan<T> items
-            , in Span<SlotKey> returnKeys
+            , Span<SlotKey> returnKeys
         )
         {
             Checks.Require(
@@ -286,75 +345,107 @@ namespace Collections.Extensions.SlotMaps
                 + $"or equal to the length of `{nameof(items)}`."
             );
 
-            var pages = _pages;
+            var sparsePages = _sparsePages;
+            var densePages = _densePages;
+            var pageSize = _pageSize;
             var length = items.Length;
 
             ref var itemCount = ref _itemCount;
+            ref var lastDenseIndex = ref _lastDenseIndex;
 
             for (var i = 0; i < length; i++)
             {
                 ref readonly var item = ref items[i];
 
-                if (TryGetNewKey(out var key, out var sparseAddress, out var denseAddress))
-                {
-                    ref var page = ref pages[sparseAddress.PageIndex];
-                    page.Add(sparseAddress.ItemIndex, key, item);
-
-                    itemCount++;
-
-                    returnKeys[i] = key;
-                }
-                else
+                if (TryGetNewKey(out var key, out var sparseAddress, out var denseIndex) == false)
                 {
                     throw new SlotMapException(
                         $"Cannot add `{nameof(item)}` to {s_name} at index {i}. Item value: {item}."
                     );
                 }
+
+                ref var sparsePage = ref sparsePages[sparseAddress.PageIndex];
+                sparsePage.Add(sparseAddress.ItemIndex, key, denseIndex);
+
+                var denseAddress = SlotAddress.FromIndex(denseIndex, pageSize);
+                ref var densePage = ref densePages[denseAddress.PageIndex];
+                densePage.Add(denseAddress.ItemIndex, sparseAddress.ToIndex(pageSize), item);
+
+                itemCount++;
+                lastDenseIndex++;
+                returnKeys[i] = key;
             }
         }
 
         public bool TryAdd(T item, out SlotKey key)
         {
-            if (TryGetNewKey(out key, out var sparseAddress, out var denseAddress) == false)
+            if (TryGetNewKey(out key, out var sparseAddress, out var denseIndex) == false)
             {
                 Checks.Warning(false, $"Cannot add `{nameof(item)}` to {s_name}. Item value: {item}.");
                 return false;
             }
 
-            ref var page = ref _pages[sparseAddress.PageIndex];
+            ref var sparsePage = ref _sparsePages[sparseAddress.PageIndex];
 
-            if (page.TryAdd(sparseAddress.ItemIndex, key, item))
+            var pageSize = _pageSize;
+            var denseAddress = SlotAddress.FromIndex(denseIndex, _pageSize);
+            ref var densePage = ref _densePages[denseAddress.PageIndex];
+
+            if (sparsePage.TryAdd(sparseAddress.ItemIndex, key, denseIndex) == false)
             {
-                _itemCount++;
-                return true;
+                return false;
             }
 
-            return false;
+#if !DISABLE_SLOTMAP_CHECKS
+            try
+#endif
+            {
+                densePage.Add(denseAddress.ItemIndex, sparseAddress.ToIndex(pageSize), item);
+
+                _itemCount++;
+                _lastDenseIndex++;
+                return true;
+            }
+#if !DISABLE_SLOTMAP_CHECKS
+            catch (Exception ex)
+            {
+                Checks.Require(false, $"{s_name} is unexpectedly corrupted.", ex);
+                return false;
+            }
+#endif
         }
 
-        public void TryAddRange(
+        public bool TryAddRange(
               in ReadOnlySpan<T> items
-            , in Span<SlotKey> returnKeys
-            , out uint returnCount
+            , Span<SlotKey> returnKeys
+            , out uint returnKeyCount
         )
         {
-            Checks.Require(
-                  returnKeys.Length >= items.Length
-                , $"The length `{nameof(returnKeys)}` must be greater than "
-                + $"or equal to the length of `{nameof(items)}`."
-            );
+            if (returnKeys.Length < items.Length)
+            {
+                Checks.Warning(false
+                    , $"The length `{nameof(returnKeys)}` must be greater than "
+                    + $"or equal to the length of `{nameof(items)}`."
+                );
 
-            var pages = _pages;
+                returnKeyCount = 0;
+                return false;
+            }
+
+            var sparsePages = _sparsePages;
+            var densePages = _densePages;
+            var pageSize = _pageSize;
             var length = items.Length;
             var resultIndex = 0;
 
             ref var itemCount = ref _itemCount;
+            ref var lastDenseIndex = ref _lastDenseIndex;
 
             for (var i = 0; i < length; i++)
             {
                 ref readonly var item = ref items[i];
 
-                if (TryGetNewKey(out var key, out var sparseAddress, out var denseAddress) == false)
+                if (TryGetNewKey(out var key, out var sparseAddress, out var denseIndex) == false)
                 {
                     Checks.Warning(false
                         , $"Cannot add `{nameof(item)}` to {s_name} at index {i}. Item value: {item}."
@@ -362,105 +453,205 @@ namespace Collections.Extensions.SlotMaps
                     continue;
                 }
 
-                ref var page = ref pages[sparseAddress.PageIndex];
+                ref var sparsePage = ref sparsePages[sparseAddress.PageIndex];
 
-                if (page.TryAdd(sparseAddress.ItemIndex, key, item))
+                var denseAddress = SlotAddress.FromIndex(denseIndex, pageSize);
+                ref var densePage = ref densePages[denseAddress.PageIndex];
+
+                if (sparsePage.TryAdd(sparseAddress.ItemIndex, key, denseIndex) == false)
                 {
+                    continue;
+                }
+
+#if !DISABLE_SLOTMAP_CHECKS
+                try
+#endif
+                {
+                    densePage.Add(denseAddress.ItemIndex, sparseAddress.ToIndex(pageSize), item);
+
+                    lastDenseIndex++;
                     itemCount++;
 
                     returnKeys[resultIndex] = key;
                     resultIndex++;
                 }
+#if !DISABLE_SLOTMAP_CHECKS
+                catch (Exception ex)
+                {
+                    Checks.Require(false, $"{s_name} is unexpectedly corrupted.", ex);
+                    continue;
+                }
+#endif
             }
 
-            returnCount = (uint)resultIndex;
+            returnKeyCount = (uint)resultIndex;
+            return true;
         }
 
         public SlotKey Replace(SlotKey key, T item)
         {
-            if (Utilities.FindAddress(_pages.Length, _pageSize, key, out var address))
-            {
-                ref var page = ref _pages[address.PageIndex];
+            var sparsePages = _sparsePages;
+            var pageSize = _pageSize;
+            var pageLength = sparsePages.Length;
 
-                if (page.TryReplace(address.ItemIndex, key, item, out var newKey))
-                {
-                    return newKey;
-                }
+            if (Utils.FindAddress(pageLength, pageSize, key, out var sparseAddress) == false)
+            {
+                throw new SlotMapException($"Cannot replace `{nameof(item)}` in {s_name}. Item value: {item}.");
             }
 
-            throw new SlotMapException($"Cannot replace `{nameof(item)}` in {s_name}. Item value: {item}.");
+            ref var sparsePage = ref sparsePages[sparseAddress.PageIndex];
+            var denseIndex = sparsePage.GetDenseIndex(sparseAddress.ItemIndex, key);
+
+            var newKey = sparsePage.Replace(sparseAddress.ItemIndex, key, denseIndex);
+            var denseAddress = SlotAddress.FromIndex(denseIndex, pageSize);
+
+            ref var densePage = ref _densePages[denseAddress.PageIndex];
+            densePage.Replace(denseAddress.ItemIndex, sparseAddress.ToIndex(pageSize), item);
+
+            return newKey;
         }
 
         public bool TryReplace(SlotKey key, T item, out SlotKey newKey)
         {
-            if (Utilities.FindAddress(_pages.Length, _pageSize, key, out var address) == false)
+            var sparsePages = _sparsePages;
+            var pageSize = _pageSize;
+            var pageLength = sparsePages.Length;
+
+            if (Utils.FindAddress(pageLength, pageSize, key, out var sparseAddress) == false)
             {
                 newKey = key;
                 return false;
             }
 
-            ref var page = ref _pages[address.PageIndex];
-            return page.TryReplace(address.ItemIndex, key, item, out newKey);
+            ref var sparsePage = ref sparsePages[sparseAddress.PageIndex];
+            
+            if (sparsePage.TryGetDenseIndex(sparseAddress.ItemIndex, key, out var denseIndex) == false)
+            {
+                newKey = key;
+                return false;
+            }
+
+            if (sparsePage.TryReplace(sparseAddress.ItemIndex, key, denseIndex, out newKey) == false)
+            {
+                return false;
+            }
+
+#if !DISABLE_SLOTMAP_CHECKS
+            try
+#endif
+            {
+                var denseAddress = SlotAddress.FromIndex(denseIndex, pageSize);
+                ref var densePage = ref _densePages[denseAddress.PageIndex];
+                densePage.Replace(denseAddress.ItemIndex, sparseAddress.ToIndex(pageSize), item);
+                return true;
+            }
+#if !DISABLE_SLOTMAP_CHECKS
+            catch (Exception ex)
+            {
+                Checks.Require(false, $"{s_name} is unexpectedly corrupted.", ex);
+                return false;
+            }
+#endif
         }
 
         public bool Remove(SlotKey key)
         {
-            var pages = _pages;
-            var pageLength = pages.Length;
+            var sparsePages = _sparsePages;
+            var pageLength = sparsePages.Length;
+            var pageSize = _pageSize;
 
-            if (Utilities.FindAddress(pageLength, _pageSize, key, out var address) == false)
+            if (Utils.FindAddress(pageLength, pageSize, key, out var sparseAddress) == false)
             {
                 return false;
             }
 
-            ref var page = ref pages[address.PageIndex];
+            ref var sparsePage = ref sparsePages[sparseAddress.PageIndex];
 
-            if (page.TryRemove(address.ItemIndex, key) == false)
+            if (sparsePage.Remove(sparseAddress.ItemIndex, key, out var denseIndex) == false)
             {
                 return false;
             }
 
-            _itemCount--;
-
-            if (key.Version < SlotVersion.MaxValue)
+#if !DISABLE_SLOTMAP_CHECKS
+            try
+#endif
             {
-                _freeKeys.Enqueue(key);
-            }
-            else
-            {
-                _tombstoneCount++;
-            }
+                var densePages = _densePages;
 
-            return true;
+                var denseAddress = SlotAddress.FromIndex(denseIndex, pageSize);
+                var lastDenseAddress = SlotAddress.FromIndex((uint)_lastDenseIndex, pageSize);
+
+                ref var densePage = ref densePages[denseAddress.PageIndex];
+                ref var lastDensePage = ref densePages[lastDenseAddress.PageIndex];
+
+                ref var lastItem = ref lastDensePage.GetRef(lastDenseAddress.ItemIndex);
+
+                densePage.Replace(denseAddress.ItemIndex, sparseAddress.ToIndex(pageSize), lastItem);
+                lastDensePage.Remove(lastDenseAddress.ItemIndex);
+
+                _lastDenseIndex--;
+                _itemCount--;
+
+                if (key.Version < SlotVersion.MaxValue)
+                {
+                    _freeKeys.Enqueue(key);
+                }
+                else
+                {
+                    _tombstoneCount++;
+                }
+
+                return true;
+            }
+#if !DISABLE_SLOTMAP_CHECKS
+            catch (Exception ex)
+            {
+                Checks.Require(false, $"{s_name} is unexpectedly corrupted.", ex);
+                return false;
+            }
+#endif
         }
 
         public void RemoveRange(in ReadOnlySpan<SlotKey> keys)
         {
-            var pages = _pages;
-            var pageLength = pages.Length;
+            var sparsePages = _sparsePages;
+            var densePages = _densePages;
+            var pageLength = sparsePages.Length;
             var pageSize = _pageSize;
             var freeKeys = _freeKeys;
             var length = keys.Length;
 
             ref var itemCount = ref _itemCount;
             ref var tombstoneCount = ref _tombstoneCount;
+            ref var lastDenseIndex = ref _lastDenseIndex;
 
             for (var i = 0; i < length; i++)
             {
                 ref readonly var key = ref keys[i];
 
-                if (Utilities.FindAddress(pageLength, pageSize, key, out var address) == false)
+                if (Utils.FindAddress(pageLength, pageSize, key, out var sparseAddress) == false)
                 {
                     continue;
                 }
 
-                ref var page = ref pages[address.PageIndex];
+                ref var sparsePage = ref sparsePages[sparseAddress.PageIndex];
 
-                if (page.TryRemove(address.ItemIndex, key) == false)
+                if (sparsePage.Remove(sparseAddress.ItemIndex, key, out var denseIndex) == false)
                 {
                     continue;
                 }
+                var denseAddress = SlotAddress.FromIndex(denseIndex, pageSize);
+                var lastDenseAddress = SlotAddress.FromIndex((uint)lastDenseIndex, pageSize);
 
+                ref var densePage = ref densePages[denseAddress.PageIndex];
+                ref var lastDensePage = ref densePages[lastDenseAddress.PageIndex];
+
+                ref var lastItem = ref lastDensePage.GetRef(lastDenseAddress.ItemIndex);
+
+                densePage.Replace(denseAddress.ItemIndex, sparseAddress.ToIndex(pageSize), lastItem);
+                lastDensePage.Remove(lastDenseAddress.ItemIndex);
+
+                lastDenseIndex--;
                 itemCount--;
 
                 if (key.Version < SlotVersion.MaxValue)
@@ -476,13 +667,15 @@ namespace Collections.Extensions.SlotMaps
 
         public bool Contains(SlotKey key)
         {
-            if (Utilities.FindAddress(_pages.Length, _pageSize, key, out var address) == false)
+            var sparsePages = _sparsePages;
+
+            if (Utils.FindAddress(sparsePages.Length, _pageSize, key, out var address) == false)
             {
                 return false;
             }
 
-            ref var page = ref _pages[address.PageIndex];
-            return page.Contains(address.ItemIndex, key);
+            ref var sparsePage = ref sparsePages[address.PageIndex];
+            return sparsePage.Contains(address.ItemIndex, key);
         }
 
         /// <summary>
@@ -510,16 +703,16 @@ namespace Collections.Extensions.SlotMaps
 
             _itemCount = 0;
             _tombstoneCount = 0;
-            _lastDenseIndex = 0;
+            _lastDenseIndex = -1;
         }
 
         private bool TryGetNewKey(
               out SlotKey key
             , out SlotAddress sparseAddress
-            , out SlotAddress denseAddress
+            , out uint denseIndex
         )
         {
-            if (TryReuseFreeKey(out key, out sparseAddress, out denseAddress))
+            if (TryReuseFreeKey(out key, out sparseAddress, out denseIndex))
             {
                 return true;
             }
@@ -537,7 +730,7 @@ namespace Collections.Extensions.SlotMaps
             {
                 if (TryAddPage() == false)
                 {
-                    SetDefault(out key, out sparseAddress, out denseAddress);
+                    SetDefault(out key, out sparseAddress, out denseIndex);
                     return false;
                 }
 
@@ -547,14 +740,14 @@ namespace Collections.Extensions.SlotMaps
 
             sparseAddress = new(lastPageIndex, lastPageItemCount);
             key = new SlotKey(sparseAddress.ToIndex(_pageSize));
-            denseAddress = SlotAddress.FromIndex(_lastDenseIndex + 1, pageSize);
+            denseIndex = (uint)(_lastDenseIndex + 1);
             return true;
         }
 
         private bool TryReuseFreeKey(
               out SlotKey key
             , out SlotAddress sparseAddress
-            , out SlotAddress denseAddress
+            , out uint denseIndex
         )
         {
             var pageSize = _pageSize;
@@ -562,14 +755,14 @@ namespace Collections.Extensions.SlotMaps
 
             if (freeKeys.Count <= _freeIndicesLimit)
             {
-                SetDefault(out key, out sparseAddress, out denseAddress);
+                SetDefault(out key, out sparseAddress, out denseIndex);
                 return false;
             }
 
             var oldKey = freeKeys.Dequeue();
             key = oldKey.WithVersion(oldKey.Version + 1);
             sparseAddress = SlotAddress.FromIndex(key.Index, pageSize);
-            denseAddress = SlotAddress.FromIndex(_lastDenseIndex + 1, pageSize);
+            denseIndex = (uint)(_lastDenseIndex + 1);
             return true;
         }
 
@@ -592,7 +785,6 @@ namespace Collections.Extensions.SlotMaps
             Array.Resize(ref _sparsePages, newPageLength);
             Array.Resize(ref _densePages, newPageLength);
 
-
             _sparsePages[newPageIndex] = new SparsePage(_pageSize);
             _densePages[newPageIndex] = new DensePage(_pageSize);
 
@@ -603,12 +795,12 @@ namespace Collections.Extensions.SlotMaps
         private static void SetDefault(
               out SlotKey key
             , out SlotAddress sparseAddress
-            , out SlotAddress denseAddress
+            , out uint denseIndex
         )
         {
             key = default;
             sparseAddress = default;
-            denseAddress = default;
+            denseIndex = default;
         }
     }
 }
