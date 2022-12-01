@@ -18,7 +18,7 @@ namespace Collections.Extensions.SlotMaps
 
         T Get(SlotKey key);
 
-        void GetRange(in ReadOnlySpan<SlotKey> keys, in Span<T> returnItems);
+        void GetRange(in ReadOnlySpan<SlotKey> keys, Span<T> returnItems);
 
         ref readonly T GetRef(SlotKey key);
 
@@ -26,14 +26,19 @@ namespace Collections.Extensions.SlotMaps
 
         bool TryGet(SlotKey key, out T item);
 
-        void TryGetRange(in ReadOnlySpan<SlotKey> keys, in Span<SlotKey> returnKeys, in Span<T> returnItems, out uint returnCount);
+        bool TryGetRange(
+              in ReadOnlySpan<SlotKey> keys
+            , Span<SlotKey> returnKeys
+            , Span<T> returnItems
+            , out uint returnItemCount
+        );
     }
 
     public interface ISlotMap<T> : IReadOnlySlotMap<T>
     {
         SlotKey Add(T item);
 
-        void AddRange(in ReadOnlySpan<T> items, in Span<SlotKey> returnKeys);
+        void AddRange(in ReadOnlySpan<T> items, Span<SlotKey> returnKeys);
 
         bool Remove(SlotKey key);
 
@@ -45,8 +50,12 @@ namespace Collections.Extensions.SlotMaps
 
         bool TryAdd(T item, out SlotKey key);
 
-        void TryAddRange(in ReadOnlySpan<T> items, in Span<SlotKey> returnKeys, out uint returnCount);
-
         bool TryReplace(SlotKey key, T item, out SlotKey newKey);
+
+        bool TryAddRange(
+              in ReadOnlySpan<T> items
+            , Span<SlotKey> returnKeys
+            , out uint returnKeyCount
+        );
     }
 }

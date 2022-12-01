@@ -5,7 +5,7 @@ namespace Collections.Extensions.SlotMaps
 {
     partial class SlotMap<T>
     {
-        private struct Page
+        public struct Page
         {
             private readonly SlotMeta[] _metas;
             private readonly T[] _items;
@@ -25,7 +25,19 @@ namespace Collections.Extensions.SlotMaps
                 get => _count;
             }
 
-            public ref T GetRef(uint index, SlotKey key)
+            public ReadOnlyMemory<SlotMeta> Metas
+            {
+                [MethodImpl(MethodImplOptions.AggressiveInlining)]
+                get => _metas;
+            }
+
+            public ReadOnlyMemory<T> Items
+            {
+                [MethodImpl(MethodImplOptions.AggressiveInlining)]
+                get => _items;
+            }
+
+            internal ref T GetRef(uint index, SlotKey key)
             {
                 ref readonly var meta = ref _metas[index];
 
@@ -53,7 +65,7 @@ namespace Collections.Extensions.SlotMaps
                 return ref _items[index];
             }
 
-            public ref T GetRefNotThrow(uint index, SlotKey key)
+            internal ref T GetRefNotThrow(uint index, SlotKey key)
             {
                 ref readonly var meta = ref _metas[index];
 
@@ -103,7 +115,7 @@ namespace Collections.Extensions.SlotMaps
                 return ref _items[index];
             }
 
-            public void Add(uint index, SlotKey key, T item)
+            internal void Add(uint index, SlotKey key, T item)
             {
                 ref var meta = ref _metas[index];
 
@@ -177,7 +189,7 @@ namespace Collections.Extensions.SlotMaps
                 return true;
             }
 
-            public bool TryReplace(uint index, SlotKey key, T item, out SlotKey newKey)
+            internal bool TryReplace(uint index, SlotKey key, T item, out SlotKey newKey)
             {
                 ref var meta = ref _metas[index];
 
@@ -251,7 +263,7 @@ namespace Collections.Extensions.SlotMaps
                 return true;
             }
 
-            public bool TryRemove(uint index, SlotKey key)
+            internal bool TryRemove(uint index, SlotKey key)
             {
                 ref var meta = ref _metas[index];
 
@@ -312,7 +324,7 @@ namespace Collections.Extensions.SlotMaps
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public bool Contains(uint index, SlotKey key)
+            internal bool Contains(uint index, SlotKey key)
             {
                 ref readonly var meta = ref _metas[index];
                 return meta.IsValid 
@@ -320,7 +332,7 @@ namespace Collections.Extensions.SlotMaps
                     && meta.Version == key.Version;
             }
 
-            public void Clear()
+            internal void Clear()
             {
                 Array.Clear(_metas, 0, _metas.Length);
 
