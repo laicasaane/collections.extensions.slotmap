@@ -34,24 +34,20 @@ namespace Collections.Extensions.SlotMaps
                     + $"Key value: {key}."
                 );
 
-                var state = meta.State;
-
-                Checks.Require(state != SlotState.Tombstone
+                Checks.Require(meta.State != SlotState.Tombstone
                     , $"Cannot get item because `{nameof(key)}` is pointing to a dead slot. "
                     + $"Key value: {key}."
                 );
 
-                Checks.Require(state == SlotState.Occupied
+                Checks.Require(meta.State == SlotState.Occupied
                     , $"Cannot get item because `{nameof(key)}` is pointing to an empty slot. "
                     + $"Key value: {key}."
                 );
 
-                var version = meta.Version;
-
-                Checks.Require(version == key.Version
+                Checks.Require(meta.Version == key.Version
                     , $"Cannot get item because `key.{nameof(SlotKey.Version)}` "
                     + $"is different from the current version. "
-                    + $"Key value: {key}. Current version: {version}. "
+                    + $"Key value: {key}. Current version: {meta.Version}. "
                 );
 
                 return ref _items[index];
@@ -93,14 +89,12 @@ namespace Collections.Extensions.SlotMaps
                     return ref Unsafe.NullRef<T>();
                 }
 
-                var currentVersion = meta.Version;
-
-                if (currentVersion != key.Version)
+                if (meta.Version != key.Version)
                 {
                     Checks.Warning(false
                         , $"Cannot get item because `key.{nameof(SlotKey.Version)}` "
                         + $"is different from the current version. "
-                        + $"Key value: {key}. Current version: {currentVersion}."
+                        + $"Key value: {key}. Current version: {meta.Version}."
                     );
 
                     return ref Unsafe.NullRef<T>();
@@ -112,25 +106,23 @@ namespace Collections.Extensions.SlotMaps
             public void Add(uint index, SlotKey key, T item)
             {
                 ref var meta = ref _metas[index];
-                var state = meta.State;
 
-                Checks.Require(state != SlotState.Tombstone
+                Checks.Require(meta.State != SlotState.Tombstone
                     , $"Cannot add item because `{nameof(key)}` is pointing to a dead slot. "
                     + $"Key value: {key}."
                 );
 
-                Checks.Require(state == SlotState.Empty
+                Checks.Require(meta.State == SlotState.Empty
                     , $"Cannot add item because `{nameof(key)}` is pointing to an occupied slot. "
                     + $"Key value: {key}."
                 );
 
-                var currentVersion = meta.Version;
                 var version = key.Version;
 
-                Checks.Require(currentVersion < version
+                Checks.Require(meta.Version < version
                     , $"Cannot add item because `key.{nameof(SlotKey.Version)}` "
                     + $"is lesser than or equal to the current version. "
-                    + $"Key value: {key}. Current version: {currentVersion}."
+                    + $"Key value: {key}. Current version: {meta.Version}."
                 );
 
                 _items[index] = item;

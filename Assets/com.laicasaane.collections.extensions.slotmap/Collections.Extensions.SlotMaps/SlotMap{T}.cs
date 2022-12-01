@@ -504,17 +504,12 @@ namespace Collections.Extensions.SlotMaps
 
         private bool TryGetNewKey(out SlotKey key, out SlotAddress address)
         {
-            var pageSize = _pageSize;
-            var freeKeys = _freeKeys;
-
-            if (freeKeys.Count > _freeIndicesLimit)
+            if (TryReuseFreeKey(out key, out address))
             {
-                var oldKey = freeKeys.Dequeue();
-                key = oldKey.WithVersion(oldKey.Version + 1);
-                address = SlotAddress.FromIndex(key.Index, pageSize);
                 return true;
             }
 
+            var pageSize = _pageSize;
             var pages = _pages;
             var numberOfPages = (uint)pages.Length;
             var lastPageIndex = numberOfPages - 1;
@@ -527,8 +522,7 @@ namespace Collections.Extensions.SlotMaps
             {
                 if (TryAddPage() == false)
                 {
-                    key = default;
-                    address = default;
+                    SetDefault(out key, out address);
                     return false;
                 }
 
@@ -538,6 +532,26 @@ namespace Collections.Extensions.SlotMaps
 
             address = new(lastPageIndex, lastPageItemCount);
             key = new SlotKey(address.ToIndex(_pageSize));
+            return true;
+        }
+
+        private bool TryReuseFreeKey(
+              out SlotKey key
+            , out SlotAddress address
+        )
+        {
+            var pageSize = _pageSize;
+            var freeKeys = _freeKeys;
+
+            if (freeKeys.Count <= _freeIndicesLimit)
+            {
+                SetDefault(out key, out address);
+                return false;
+            }
+
+            var oldKey = freeKeys.Dequeue();
+            key = oldKey.WithVersion(oldKey.Version + 1);
+            address = SlotAddress.FromIndex(key.Index, pageSize);
             return true;
         }
 
@@ -559,6 +573,13 @@ namespace Collections.Extensions.SlotMaps
             _pages[newPageIndex] = new Page(_pageSize);
 
             return true;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void SetDefault(out SlotKey key, out SlotAddress address)
+        {
+            key = default;
+            address = default;
         }
     }
 }
