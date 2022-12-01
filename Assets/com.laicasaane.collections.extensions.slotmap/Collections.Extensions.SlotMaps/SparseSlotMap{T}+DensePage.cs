@@ -54,8 +54,10 @@ namespace Collections.Extensions.SlotMaps
                 _items[index] = item;
             }
 
-            internal void Remove(uint index)
+            internal void Remove(uint index, out T item, out uint sparseIndex)
             {
+                item = _items[index];
+                sparseIndex = _sparseIndices[index];
                 _items[index] = default;
                 _count--;
             }

@@ -307,6 +307,10 @@ namespace Collections.Extensions.SlotMaps
                 return true;
             }
 
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            internal void ReplaceDenseIndexUnsafe(uint index, uint denseIndex)
+                => _denseIndices[index] = denseIndex;
+
             internal bool Remove(uint index, SlotKey key, out uint denseIndex)
             {
                 ref var meta = ref _metas[index];

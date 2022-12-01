@@ -567,7 +567,7 @@ namespace Collections.Extensions.SlotMaps
 
             ref var sparsePage = ref sparsePages[sparseAddress.PageIndex];
 
-            if (sparsePage.Remove(sparseAddress.ItemIndex, key, out var denseIndex) == false)
+            if (sparsePage.Remove(sparseAddress.ItemIndex, key, out var denseIndexToRemove) == false)
             {
                 return false;
             }
@@ -576,18 +576,25 @@ namespace Collections.Extensions.SlotMaps
             try
 #endif
             {
+                // Swap last slot pointed by _lastDenseIndex
+                // to the slot pointed by denseIndexToRemove
+
+                var indexDest = denseIndexToRemove;
+                var indexSrc = (uint)_lastDenseIndex;
                 var densePages = _densePages;
 
-                var denseAddress = SlotAddress.FromIndex(denseIndex, pageSize);
-                var lastDenseAddress = SlotAddress.FromIndex((uint)_lastDenseIndex, pageSize);
+                var addressDest = SlotAddress.FromIndex(indexDest, pageSize);
+                var addressSrc = SlotAddress.FromIndex(indexSrc, pageSize);
 
-                ref var densePage = ref densePages[denseAddress.PageIndex];
-                ref var lastDensePage = ref densePages[lastDenseAddress.PageIndex];
+                ref var pageDest = ref densePages[addressDest.PageIndex];
+                ref var pageSrc = ref densePages[addressSrc.PageIndex];
 
-                ref var lastItem = ref lastDensePage.GetRef(lastDenseAddress.ItemIndex);
+                pageSrc.Remove(addressSrc.ItemIndex, out var item, out var sparseIndexToReplace);
+                pageDest.Replace(addressDest.ItemIndex, sparseAddress.ToIndex(pageSize), item);
 
-                densePage.Replace(denseAddress.ItemIndex, sparseAddress.ToIndex(pageSize), lastItem);
-                lastDensePage.Remove(lastDenseAddress.ItemIndex);
+                var sparseAddressToReplace = SlotAddress.FromIndex(sparseIndexToReplace, pageSize);
+                ref var sparsePageToReplace = ref sparsePages[sparseAddressToReplace.PageIndex];
+                sparsePageToReplace.ReplaceDenseIndexUnsafe(sparseAddressToReplace.ItemIndex, addressDest.ItemIndex);
 
                 _lastDenseIndex--;
                 _itemCount--;
@@ -636,20 +643,29 @@ namespace Collections.Extensions.SlotMaps
 
                 ref var sparsePage = ref sparsePages[sparseAddress.PageIndex];
 
-                if (sparsePage.Remove(sparseAddress.ItemIndex, key, out var denseIndex) == false)
+                if (sparsePage.Remove(sparseAddress.ItemIndex, key, out var denseIndexToRemove) == false)
                 {
                     continue;
                 }
-                var denseAddress = SlotAddress.FromIndex(denseIndex, pageSize);
-                var lastDenseAddress = SlotAddress.FromIndex((uint)lastDenseIndex, pageSize);
 
-                ref var densePage = ref densePages[denseAddress.PageIndex];
-                ref var lastDensePage = ref densePages[lastDenseAddress.PageIndex];
+                // Swap last slot pointed by _lastDenseIndex
+                // to the slot pointed by denseIndexToRemove
 
-                ref var lastItem = ref lastDensePage.GetRef(lastDenseAddress.ItemIndex);
+                var indexDest = denseIndexToRemove;
+                var indexSrc = (uint)_lastDenseIndex;
 
-                densePage.Replace(denseAddress.ItemIndex, sparseAddress.ToIndex(pageSize), lastItem);
-                lastDensePage.Remove(lastDenseAddress.ItemIndex);
+                var addressDest = SlotAddress.FromIndex(indexDest, pageSize);
+                var addressSrc = SlotAddress.FromIndex(indexSrc, pageSize);
+
+                ref var pageDest = ref densePages[addressDest.PageIndex];
+                ref var pageSrc = ref densePages[addressSrc.PageIndex];
+
+                pageSrc.Remove(addressSrc.ItemIndex, out var item, out var sparseIndexToReplace);
+                pageDest.Replace(addressDest.ItemIndex, sparseAddress.ToIndex(pageSize), item);
+
+                var sparseAddressToReplace = SlotAddress.FromIndex(sparseIndexToReplace, pageSize);
+                ref var sparsePageToReplace = ref sparsePages[sparseAddressToReplace.PageIndex];
+                sparsePageToReplace.ReplaceDenseIndexUnsafe(sparseAddressToReplace.ItemIndex, addressDest.ItemIndex);
 
                 lastDenseIndex--;
                 itemCount--;

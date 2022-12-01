@@ -10,39 +10,37 @@ namespace Project.Runtime
     {
         private void Start()
         {
-            const int MAX_INDEX = 63;
+            const int MAX_INDEX = 33;
 
-            var slotmap = new SparseSlotMap<string>(32);
+            var slotmap = new SparseSlotMap<int>(16);
             var slotkeys = new SlotKey[MAX_INDEX + 1];
 
             foreach (var i in 0..MAX_INDEX)
             {
-                slotkeys[i] = slotmap.Add(i.ToString());
+                slotkeys[i] = slotmap.Add(i);
             }
 
             foreach (var i in 0..MAX_INDEX)
             {
                 var key = slotkeys[i];
                 var address = SlotAddress.FromIndex(key.Index, slotmap.PageSize);
-                Debug.Log($"{key} = {key.Raw} :: {address} = {address.Raw}");
+                Debug.Log($"Add: {key} :: {address} == {i}");
             }
 
-            const int RANDOM_MAX_INDEX = 15;
-            var randomKeys = new SlotKey[RANDOM_MAX_INDEX + 1];
+            var indicesToRemove = new uint[] { 1, 8, 20, 8, 5, 29 };
 
-            foreach (var i in 0..RANDOM_MAX_INDEX)
+            foreach (var index in indicesToRemove)
             {
-                var randomIndex = UnityEngine.Random.Range(0, MAX_INDEX);
-                var randomKey = slotkeys[randomIndex];
-                randomKeys[i] = randomKey;
+                ref var key = ref slotkeys[index];
 
-                if (slotmap.Remove(randomKey))
+                if (slotmap.Remove(key))
                 {
-                    Debug.Log($"Remove {randomKey}");
+                    var address = SlotAddress.FromIndex(key.Index, slotmap.PageSize);
+                    Debug.Log($"Remove: {key} :: {address}");
                 }
             }
 
-            Debug.Log("SPARSE PAGES");
+            Debug.Log($"SPARSE PAGES :: Item Count = {slotmap.ItemCount}");
 
             var sparsePages = slotmap.SparsePages.Span;
             var sparseLength = sparsePages.Length;
@@ -56,11 +54,12 @@ namespace Project.Runtime
 
                 for (var k = 0; k < length; k++)
                 {
-                    Debug.Log($"{metas[k]} == {denseIndices[k]}");
+                    var key = new SlotAddress((uint)i, (uint)k).ToIndex(slotmap.PageSize);
+                    Debug.Log($"({key}, 1) = {metas[k]} == {denseIndices[k]}");
                 }
             }
 
-            Debug.Log("DENSE PAGES");
+            Debug.Log($"DENSE PAGES :: Item Count = {slotmap.ItemCount}");
 
             var densePages = slotmap.DensePages.Span;
             var denseLength = densePages.Length;
@@ -74,7 +73,8 @@ namespace Project.Runtime
 
                 for (var k = 0; k < length; k++)
                 {
-                    Debug.Log($"{sparseIndices[k]} == {items[k]}");
+                    var key = new SlotAddress((uint)i, (uint)k).ToIndex(slotmap.PageSize);
+                    Debug.Log($"({key}, 1) = {sparseIndices[k]} == {items[k]}");
                 }
             }
         }
