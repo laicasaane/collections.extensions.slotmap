@@ -72,7 +72,7 @@ namespace Collections.Extensions.SlotMaps
         /// <para>Free indices will be reused when their total count exceeds this threshold.</para>
         /// </param>
         public SlotMap(
-              PowerOfTwo pageSize = PowerOfTwo.x1024
+              PowerOfTwo pageSize
             , int freeIndicesLimit = (int)PowerOfTwo.x32
         )
             : this((int)pageSize, freeIndicesLimit)
