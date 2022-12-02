@@ -3,6 +3,7 @@
 #endif
 
 using System;
+using System.Diagnostics;
 
 namespace Collections.Extensions.SlotMaps
 {
@@ -11,6 +12,7 @@ namespace Collections.Extensions.SlotMaps
 #if DISABLE_SLOTMAP_CHECKS
         [Conditional("__SLOTMAP_CHECKS_NEVER_DEFINED__")]
 #endif
+        [StackTraceHidden]
         public static void Require(bool assertion, string message)
         {
             if (assertion == false)
@@ -20,6 +22,7 @@ namespace Collections.Extensions.SlotMaps
 #if DISABLE_SLOTMAP_CHECKS
         [Conditional("__SLOTMAP_CHECKS_NEVER_DEFINED__")]
 #endif
+        [StackTraceHidden]
         public static void Require(bool assertion, string message, System.Exception inner)
         {
             if (assertion == false)
@@ -29,6 +32,7 @@ namespace Collections.Extensions.SlotMaps
 #if DISABLE_SLOTMAP_CHECKS
         [Conditional("__SLOTMAP_CHECKS_NEVER_DEFINED__")]
 #endif
+        [StackTraceHidden]
         public static void Warning(bool assertion, string message)
         {
 #if __UNITY_ENGINE__
@@ -43,6 +47,7 @@ namespace Collections.Extensions.SlotMaps
 #if DISABLE_SLOTMAP_CHECKS
         [Conditional("__SLOTMAP_CHECKS_NEVER_DEFINED__")]
 #endif
+        [StackTraceHidden]
         public static void RequireOrWarning(bool required, bool assertion, string message)
         {
 #if __UNITY_ENGINE__
@@ -62,6 +67,7 @@ namespace Collections.Extensions.SlotMaps
 #if DISABLE_SLOTMAP_CHECKS
         [Conditional("__SLOTMAP_CHECKS_NEVER_DEFINED__")]
 #endif
+        [StackTraceHidden]
         public static void RequireOrWarning(bool required, bool assertion, string message, System.Exception inner)
         {
 #if __UNITY_ENGINE__
