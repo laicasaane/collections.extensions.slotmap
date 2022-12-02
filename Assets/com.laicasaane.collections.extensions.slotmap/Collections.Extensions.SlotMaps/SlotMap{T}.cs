@@ -523,17 +523,20 @@ namespace Collections.Extensions.SlotMaps
         {
             _version++;
 
-            var pages = _pages;
+            ref var pages = ref _pages;
             var length = (uint)pages.Length;
 
             if (length > 0)
             {
-                pages[0].Clear();
-                _pages = new Page[1] {
-                    pages[0]
+                ref var firstPage = ref pages[0];
+                firstPage.Clear();
+
+                pages = new Page[1] {
+                    firstPage
                 };
             }
 
+            _freeKeys.Clear();
             _itemCount = 0;
             _tombstoneCount = 0;
         }
