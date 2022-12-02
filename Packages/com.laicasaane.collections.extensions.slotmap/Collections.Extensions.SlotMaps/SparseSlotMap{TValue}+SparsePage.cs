@@ -54,9 +54,9 @@ namespace Collections.Extensions.SlotMaps
                 );
 
                 Checks.Require(meta.Version == key.Version
-                    , $"Cannot get value because `key.{nameof(SlotKey.Version)}` "
+                    , $"Cannot get value because `key.Version` "
                     + $"is different from the current version. "
-                    + $"Key value: {key}. Current version: {meta.Version}. "
+                    + $"key.Version: {key.Version}. Current version: {meta.Version}. "
                 );
 
                 return _denseIndices[index];
@@ -101,9 +101,9 @@ namespace Collections.Extensions.SlotMaps
                 if (meta.Version != key.Version)
                 {
                     Checks.Warning(false
-                        , $"Cannot get value because `key.{nameof(SlotKey.Version)}` "
+                        , $"Cannot get value because `key.Version` "
                         + $"is different from the current version. "
-                        + $"Key value: {key}. Current version: {meta.Version}."
+                        + $"key.Version: {key.Version}. Current version: {meta.Version}."
                     );
 
                     denseIndex = default;
@@ -129,9 +129,9 @@ namespace Collections.Extensions.SlotMaps
                 var version = key.Version;
 
                 Checks.Require(meta.Version < version
-                    , $"Cannot add value because `key.{nameof(SlotKey.Version)}` "
+                    , $"Cannot add value because `key.Version` "
                     + $"is lesser than or equal to the current version. "
-                    + $"Key value: {key}. Current version: {meta.Version}."
+                    + $"key.Version: {version}. Current version: {meta.Version}."
                 );
 
                 meta = new(version, SlotState.Occupied);
@@ -168,9 +168,9 @@ namespace Collections.Extensions.SlotMaps
                 if (currentVersion >= version)
                 {
                     Checks.Warning(false
-                        , $"Cannot add value because `key.{nameof(SlotKey.Version)}` "
+                        , $"Cannot add value because `key.Version` "
                         + $"is lesser than or equal to the current version. "
-                        + $"Key value: {key}. Current version: {currentVersion}."
+                        + $"key.Version: {version}. Current version: {currentVersion}."
                     );
 
                     return false;
@@ -199,19 +199,18 @@ namespace Collections.Extensions.SlotMaps
                 );
 
                 var currentVersion = meta.Version;
-
-                Checks.Require(currentVersion < SlotVersion.MaxValue
-                    , $"Cannot replace value because `key.{nameof(SlotKey.Version)}` "
-                    + $"has reached the maximum limit. "
-                    + $"Key value: {key}. Current version: {currentVersion}."
-                );
-
                 var version = key.Version;
 
+                Checks.Require(currentVersion < SlotVersion.MaxValue
+                    , $"Cannot replace value because `key.Version` "
+                    + $"has reached the maximum limit. "
+                    + $"key.Version: {version}. Current version: {currentVersion}."
+                );
+
                 Checks.Require(currentVersion == version
-                    , $"Cannot replace value because `key.{nameof(SlotKey.Version)}` "
+                    , $"Cannot replace value because `key.Version` "
                     + $"is different from the current version. "
-                    + $"Key value: {key}. Current version: {currentVersion}."
+                    + $"key.Version: {version}. Current version: {currentVersion}."
                 );
 
                 _denseIndices[index] = denseIndex;
@@ -257,27 +256,26 @@ namespace Collections.Extensions.SlotMaps
                 }
 
                 var currentVersion = meta.Version;
+                var version = key.Version;
 
                 if (currentVersion >= SlotVersion.MaxValue)
                 {
                     Checks.Warning(false
-                        , $"Cannot replace value because `key.{nameof(SlotKey.Version)}` "
+                        , $"Cannot replace value because `key.Version` "
                         + $"has reached the maximum limit. "
-                        + $"Key value: {key}. Current version: {currentVersion}."
+                        + $"key.Version: {version}. Current version: {currentVersion}."
                     );
 
                     newKey = default;
                     return false;
                 }
 
-                var version = key.Version;
-
                 if (currentVersion != version)
                 {
                     Checks.Warning(false
-                        , $"Cannot replace value because `key.{nameof(SlotKey.Version)}` "
+                        , $"Cannot replace value because `key.Version` "
                         + $"is different from the current version. "
-                        + $"Key value: {key}. Current version: {currentVersion}."
+                        + $"key.Version: {version}. Current version: {currentVersion}."
                     );
 
                     newKey = default;
@@ -336,9 +334,9 @@ namespace Collections.Extensions.SlotMaps
                 if (currentVersion != key.Version)
                 {
                     Checks.Warning(false
-                        , $"Cannot remove value because the  `key.{nameof(SlotKey.Version)}` "
+                        , $"Cannot remove value because the  `key.Version` "
                         + $"is different from the current version. "
-                        + $"Key value: {key}. Current version: {currentVersion}."
+                        + $"key.Version: {key.Version}. Current version: {currentVersion}."
                     );
 
                     denseIndex = 0;
