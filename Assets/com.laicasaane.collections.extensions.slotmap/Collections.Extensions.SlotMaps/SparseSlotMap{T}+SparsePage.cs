@@ -7,8 +7,8 @@ namespace Collections.Extensions.SlotMaps
     {
         public struct SparsePage
         {
-            private readonly SlotMeta[] _metas;
-            private readonly uint[] _denseIndices;
+            internal readonly SlotMeta[] _metas;
+            internal readonly uint[] _denseIndices;
 
             private uint _count;
 

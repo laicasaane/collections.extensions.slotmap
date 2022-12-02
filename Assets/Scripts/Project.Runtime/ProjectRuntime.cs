@@ -40,42 +40,9 @@ namespace Project.Runtime
                 }
             }
 
-            Debug.Log($"SPARSE PAGES :: Item Count = {slotmap.ItemCount}");
-
-            var sparsePages = slotmap.SparsePages.Span;
-            var sparseLength = sparsePages.Length;
-
-            for (var i = 0; i < sparseLength; i++)
+            foreach (var (key, item) in slotmap)
             {
-                ref readonly var page = ref sparsePages[i];
-                var metas = page.Metas.Span;
-                var denseIndices = page.DenseIndices.Span;
-                var length = metas.Length;
-
-                for (var k = 0; k < length; k++)
-                {
-                    var key = new SlotAddress((uint)i, (uint)k).ToIndex(slotmap.PageSize);
-                    Debug.Log($"({key}, 1) = {metas[k]} == {denseIndices[k]}");
-                }
-            }
-
-            Debug.Log($"DENSE PAGES :: Item Count = {slotmap.ItemCount}");
-
-            var densePages = slotmap.DensePages.Span;
-            var denseLength = densePages.Length;
-
-            for (var i = 0; i < denseLength; i++)
-            {
-                ref readonly var page = ref densePages[i];
-                var sparseIndices = page.SparseIndices.Span;
-                var items = page.Items.Span;
-                var length = sparseIndices.Length;
-
-                for (var k = 0; k < length; k++)
-                {
-                    var key = new SlotAddress((uint)i, (uint)k).ToIndex(slotmap.PageSize);
-                    Debug.Log($"({key}, 1) = {sparseIndices[k]} == {items[k]}");
-                }
+                Debug.Log($"{key} == {item}");
             }
         }
     }

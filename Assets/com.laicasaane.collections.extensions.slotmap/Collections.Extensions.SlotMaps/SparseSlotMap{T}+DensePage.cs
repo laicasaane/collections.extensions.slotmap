@@ -7,8 +7,8 @@ namespace Collections.Extensions.SlotMaps
     {
         public struct DensePage
         {
-            private readonly uint[] _sparseIndices;
-            private readonly T[] _items;
+            internal readonly uint[] _sparseIndices;
+            internal readonly T[] _items;
 
             private uint _count;
 
@@ -54,10 +54,10 @@ namespace Collections.Extensions.SlotMaps
                 _items[index] = item;
             }
 
-            internal void Remove(uint index, out T item, out uint sparseIndex)
+            internal void Remove(uint index, out uint sparseIndex, out T item)
             {
-                item = _items[index];
                 sparseIndex = _sparseIndices[index];
+                item = _items[index];
                 _items[index] = default;
                 _count--;
             }
