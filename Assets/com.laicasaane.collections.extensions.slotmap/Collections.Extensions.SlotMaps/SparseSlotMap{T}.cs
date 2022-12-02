@@ -19,7 +19,7 @@ namespace Collections.Extensions.SlotMaps
         private DensePage[] _densePages = Array.Empty<DensePage>();
         private uint _itemCount;
         private uint _tombstoneCount;
-        private int _lastDenseIndex;
+        private long _lastDenseIndex;
 
         /// <summary></summary>
         /// <param name="pageSize">
@@ -580,7 +580,7 @@ namespace Collections.Extensions.SlotMaps
                 // to the slot pointed by denseIndexToRemove
 
                 var indexDest = denseIndexToRemove;
-                var indexSrc = (uint)_lastDenseIndex;
+                var indexSrc = _lastDenseIndex;
                 var densePages = _densePages;
 
                 var addressDest = SlotAddress.FromIndex(indexDest, pageSize);
@@ -652,7 +652,7 @@ namespace Collections.Extensions.SlotMaps
                 // to the slot pointed by denseIndexToRemove
 
                 var indexDest = denseIndexToRemove;
-                var indexSrc = (uint)_lastDenseIndex;
+                var indexSrc = lastDenseIndex;
 
                 var addressDest = SlotAddress.FromIndex(indexDest, pageSize);
                 var addressSrc = SlotAddress.FromIndex(indexSrc, pageSize);
