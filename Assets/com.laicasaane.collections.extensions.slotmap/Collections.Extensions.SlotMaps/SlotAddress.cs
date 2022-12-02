@@ -66,7 +66,12 @@ namespace Collections.Extensions.SlotMaps
         public uint ToIndex(uint pageSize)
             => (_pageIndex * pageSize) + _itemIndex;
 
-        public bool TryFormat(Span<char> destination, out int charsWritten, ReadOnlySpan<char> format = default, IFormatProvider provider = null)
+        public bool TryFormat(
+              Span<char> destination
+            , out int charsWritten
+            , ReadOnlySpan<char> format = default
+            , IFormatProvider provider = null
+        )
         {
             var openQuoteCharsWritten = 0;
             destination[openQuoteCharsWritten++] = '(';
@@ -99,6 +104,10 @@ namespace Collections.Extensions.SlotMaps
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static SlotAddress FromIndex(uint index, uint pageSize)
             => new(index / pageSize, index % pageSize);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static SlotAddress FromIndex(long index, uint pageSize)
+            => new((uint)(index / pageSize), (uint)(index % pageSize));
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static implicit operator ulong(SlotAddress value)

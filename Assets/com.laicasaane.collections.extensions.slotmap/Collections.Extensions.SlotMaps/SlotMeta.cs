@@ -59,6 +59,42 @@ namespace Collections.Extensions.SlotMaps
         public override string ToString()
             => $"({Version}, {State})";
 
+        public bool TryFormat(
+              Span<char> destination
+            , out int charsWritten
+            , ReadOnlySpan<char> format = default
+            , IFormatProvider provider = null
+        )
+        {
+            var openQuoteCharsWritten = 0;
+            destination[openQuoteCharsWritten++] = '(';
+
+            destination = destination[openQuoteCharsWritten..];
+
+            if (Version.TryFormat(destination, out var indexCharsWritten, format, provider) == false)
+            {
+                charsWritten = 0;
+                return false;
+            }
+
+            destination[indexCharsWritten++] = ',';
+            destination[indexCharsWritten++] = ' ';
+
+            destination = destination[indexCharsWritten..];
+
+            if (State.TryFormat(destination, out var versionCharsWritten, format, provider) == false)
+            {
+                charsWritten = 0;
+                return false;
+            }
+
+            destination[versionCharsWritten++] = ')';
+
+            charsWritten = openQuoteCharsWritten + indexCharsWritten + versionCharsWritten;
+
+            return true;
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool operator ==(SlotMeta lhs, SlotMeta rhs)
             => lhs._raw == rhs._raw;
