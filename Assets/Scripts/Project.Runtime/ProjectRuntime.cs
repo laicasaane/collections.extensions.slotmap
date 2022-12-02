@@ -10,40 +10,26 @@ namespace Project.Runtime
     {
         private void Start()
         {
-            const int MAX_INDEX = 33;
+            var slotmap = new SlotMap<int>();
+            var key01 = slotmap.Add(8);
+            var key02 = slotmap.Add(9);
+            var key03 = slotmap.Add(22);
 
-            var slotmap = new SparseSlotMap<int>(16);
-            var slotkeys = new SlotKey[MAX_INDEX + 1];
+            slotmap.Remove(key02);
 
-            foreach (var i in 0..MAX_INDEX)
-            {
-                slotkeys[i] = slotmap.Add(i);
-            }
+            Debug.Assert(slotmap.Contains(key02)); // false
+            Debug.Assert(slotmap.Contains(key03)); // true
 
-            foreach (var i in 0..MAX_INDEX)
-            {
-                var key = slotkeys[i];
-                var address = SlotAddress.FromIndex(key.Index, slotmap.PageSize);
-                Debug.Log($"Add: {key} :: {address} == {i}");
-            }
+            var item03 = slotmap.Get(key03);
+            Debug.Assert(item03 == 22); // true
 
-            var indicesToRemove = new uint[] { 1, 8, 20, 8, 5, 29 };
+            ref readonly var item01 = ref slotmap.GetRef(key01);
+            Debug.Assert(item01 == 9); // false
 
-            foreach (var index in indicesToRemove)
-            {
-                ref var key = ref slotkeys[index];
+            var newKey01 = slotmap.Replace(key01, 53);
+            Debug.Assert(slotmap.Get(newKey01) == 53); // true
 
-                if (slotmap.Remove(key))
-                {
-                    var address = SlotAddress.FromIndex(key.Index, slotmap.PageSize);
-                    Debug.Log($"Remove: {key} :: {address}");
-                }
-            }
-
-            foreach (var (key, item) in slotmap)
-            {
-                Debug.Log($"{key} == {item}");
-            }
+            var newItem01 = slotmap.Get(key01); // exception: wrong version
         }
     }
 
