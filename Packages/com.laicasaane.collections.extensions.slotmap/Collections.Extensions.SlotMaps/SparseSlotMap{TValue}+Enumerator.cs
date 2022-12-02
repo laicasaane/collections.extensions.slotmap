@@ -3,16 +3,16 @@ using System.Collections.Generic;
 
 namespace Collections.Extensions.SlotMaps
 {
-    partial class SparseSlotMap<T>
+    partial class SparseSlotMap<TValue>
     {
-        public struct Enumerator : IEnumerator<KeyValuePair<SlotKey, T>>
+        public struct Enumerator : IEnumerator<KeyValuePair<SlotKey, TValue>>
         {
-            private readonly SparseSlotMap<T> _slotmap;
+            private readonly SparseSlotMap<TValue> _slotmap;
             private readonly int _version;
-            private KeyValuePair<SlotKey, T> _current;
+            private KeyValuePair<SlotKey, TValue> _current;
             private long _denseIndex;
 
-            public Enumerator(SparseSlotMap<T> slotmap)
+            public Enumerator(SparseSlotMap<TValue> slotmap)
             {
                 _slotmap = slotmap;
                 _version = slotmap._version;
@@ -20,7 +20,7 @@ namespace Collections.Extensions.SlotMaps
                 _denseIndex = 0;
             }
             
-            public KeyValuePair<SlotKey, T> Current
+            public KeyValuePair<SlotKey, TValue> Current
             {
                 get
                 {
@@ -59,12 +59,12 @@ namespace Collections.Extensions.SlotMaps
                     var pageSize = slotmap._pageSize;
                     var denseAddress = SlotAddress.FromIndex(_denseIndex, pageSize);
                     var densePage = slotmap._densePages[denseAddress.PageIndex];
-                    var sparseIndex = densePage._sparseIndices[denseAddress.ItemIndex];
+                    var sparseIndex = densePage._sparseIndices[denseAddress.SlotIndex];
                     var sparseAddress = SlotAddress.FromIndex(sparseIndex, pageSize);
                     var sparsePage = slotmap._sparsePages[sparseAddress.PageIndex];
-                    ref var meta = ref sparsePage._metas[sparseAddress.ItemIndex];
+                    ref var meta = ref sparsePage._metas[sparseAddress.SlotIndex];
 
-                    _current = new(new(sparseIndex, meta.Version), densePage._items[denseAddress.ItemIndex]);
+                    _current = new(new(sparseIndex, meta.Version), densePage._values[denseAddress.SlotIndex]);
                     _denseIndex++;
                     return true;
                 }

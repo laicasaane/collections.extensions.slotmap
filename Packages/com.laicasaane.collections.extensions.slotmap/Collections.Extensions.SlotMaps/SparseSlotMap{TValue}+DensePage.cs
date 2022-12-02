@@ -3,19 +3,19 @@ using System.Runtime.CompilerServices;
 
 namespace Collections.Extensions.SlotMaps
 {
-    partial class SparseSlotMap<T>
+    partial class SparseSlotMap<TValue>
     {
         public struct DensePage
         {
             internal readonly uint[] _sparseIndices;
-            internal readonly T[] _items;
+            internal readonly TValue[] _values;
 
             private uint _count;
 
             public DensePage(uint size)
             {
                 _sparseIndices = new uint[size];
-                _items = new T[size];
+                _values = new TValue[size];
                 _count = 0;
             }
 
@@ -31,42 +31,42 @@ namespace Collections.Extensions.SlotMaps
                 get => _sparseIndices;
             }
 
-            public ReadOnlyMemory<T> Items
+            public ReadOnlyMemory<TValue> Values
             {
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
-                get => _items;
+                get => _values;
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            internal ref T GetRef(uint index)
-                => ref _items[index];
+            internal ref TValue GetRef(uint index)
+                => ref _values[index];
 
-            internal void Add(uint index, uint sparseIndex, T item)
+            internal void Add(uint index, uint sparseIndex, TValue value)
             {
                 _sparseIndices[index] = sparseIndex;
-                _items[index] = item;
+                _values[index] = value;
                 _count++;
             }
 
-            internal void Replace(uint index, uint sparseIndex, T item)
+            internal void Replace(uint index, uint sparseIndex, TValue value)
             {
                 _sparseIndices[index] = sparseIndex;
-                _items[index] = item;
+                _values[index] = value;
             }
 
-            internal void Remove(uint index, out uint sparseIndex, out T item)
+            internal void Remove(uint index, out uint sparseIndex, out TValue value)
             {
                 sparseIndex = _sparseIndices[index];
-                item = _items[index];
-                _items[index] = default;
+                value = _values[index];
+                _values[index] = default;
                 _count--;
             }
 
             internal void Clear()
             {
-                if (s_itemIsUnmanaged)
+                if (s_valueIsUnmanaged)
                 {
-                    Array.Clear(_items, 0, _items.Length);
+                    Array.Clear(_values, 0, _values.Length);
                 }
 
                 _count = 0;

@@ -14,15 +14,15 @@ namespace Collections.Extensions.SlotMaps
         private readonly ulong _raw;
 
         [FieldOffset(0)]
-        private readonly uint _itemIndex;
+        private readonly uint _slotIndex;
 
         [FieldOffset(4)]
         private readonly uint _pageIndex;
 
-        public SlotAddress(uint pageIndex, uint itemIndex) : this()
+        public SlotAddress(uint pageIndex, uint slotIndex) : this()
         {
             _pageIndex = pageIndex;
-            _itemIndex = itemIndex;
+            _slotIndex = slotIndex;
         }
 
         public ulong Raw
@@ -37,21 +37,21 @@ namespace Collections.Extensions.SlotMaps
             get => _pageIndex;
         }
 
-        public uint ItemIndex
+        public uint SlotIndex
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get => _itemIndex;
+            get => _slotIndex;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Deconstruct(out uint pageIndex, out uint itemIndex)
+        public void Deconstruct(out uint pageIndex, out uint slotIndex)
         {
             pageIndex = _pageIndex;
-            itemIndex = _itemIndex;
+            slotIndex = _slotIndex;
         }
 
         public override string ToString()
-            => $"({_pageIndex}, {_itemIndex})";
+            => $"({_pageIndex}, {_slotIndex})";
 
         public bool Equals(SlotAddress other)
             => _raw == other._raw;
@@ -64,7 +64,7 @@ namespace Collections.Extensions.SlotMaps
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public uint ToIndex(uint pageSize)
-            => (_pageIndex * pageSize) + _itemIndex;
+            => (_pageIndex * pageSize) + _slotIndex;
 
         public bool TryFormat(
               Span<char> destination
@@ -89,7 +89,7 @@ namespace Collections.Extensions.SlotMaps
 
             destination = destination[pageIndexCharsWritten..];
 
-            if (_itemIndex.TryFormat(destination, out var itemIndexCharsWritten, format, provider) == false)
+            if (_slotIndex.TryFormat(destination, out var itemIndexCharsWritten, format, provider) == false)
             {
                 charsWritten = 0;
                 return false;
