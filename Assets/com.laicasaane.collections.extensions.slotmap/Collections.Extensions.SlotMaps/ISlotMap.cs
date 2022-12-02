@@ -1,8 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace Collections.Extensions.SlotMaps
 {
-    public interface IReadOnlySlotMap<T>
+    public interface IReadOnlySlotMap<T> : IEnumerable<KeyValuePair<SlotKey, T>>
     {
         uint FreeIndicesLimit { get; }
 

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 
@@ -18,6 +19,7 @@ namespace Collections.Extensions.SlotMaps
         private Page[] _pages = Array.Empty<Page>();
         private uint _itemCount;
         private uint _tombstoneCount;
+        private int _version;
 
         /// <summary></summary>
         /// <param name="pageSize">
@@ -56,6 +58,8 @@ namespace Collections.Extensions.SlotMaps
             _tombstoneCount = 0;
 
             TryAddPage();
+
+            _version = 0;
         }
 
         /// <summary></summary>
@@ -277,6 +281,8 @@ namespace Collections.Extensions.SlotMaps
 
         public SlotKey Add(T item)
         {
+            _version++;
+
             if (TryGetNewKey(out var key, out var address) == false)
             {
                 throw new SlotMapException($"Cannot add `{nameof(item)}` to {s_name}. Item value: {item}.");
@@ -298,6 +304,8 @@ namespace Collections.Extensions.SlotMaps
                 , $"The length `{nameof(returnKeys)}` must be greater than "
                 + $"or equal to the length of `{nameof(items)}`."
             );
+
+            _version++;
 
             var pages = _pages;
             var length = items.Length;
@@ -324,6 +332,8 @@ namespace Collections.Extensions.SlotMaps
 
         public bool TryAdd(T item, out SlotKey key)
         {
+            _version++;
+
             if (TryGetNewKey(out key, out var address) == false)
             {
                 Checks.Warning(false, $"Cannot add `{nameof(item)}` to {s_name}. Item value: {item}.");
@@ -357,6 +367,8 @@ namespace Collections.Extensions.SlotMaps
                 returnKeyCount = 0;
                 return false;
             }
+
+            _version++;
 
             var pages = _pages;
             var length = items.Length;
@@ -393,6 +405,8 @@ namespace Collections.Extensions.SlotMaps
 
         public SlotKey Replace(SlotKey key, T item)
         {
+            _version++;
+
             if (Utils.FindAddress(_pages.Length, _pageSize, key, out var address) == false)
             {
                 throw new SlotMapException($"Cannot replace `{nameof(item)}` in {s_name}. Item value: {item}.");
@@ -404,6 +418,8 @@ namespace Collections.Extensions.SlotMaps
 
         public bool TryReplace(SlotKey key, T item, out SlotKey newKey)
         {
+            _version++;
+
             if (Utils.FindAddress(_pages.Length, _pageSize, key, out var address) == false)
             {
                 newKey = key;
@@ -416,6 +432,8 @@ namespace Collections.Extensions.SlotMaps
 
         public bool Remove(SlotKey key)
         {
+            _version++;
+
             var pages = _pages;
             var pageLength = pages.Length;
 
@@ -447,6 +465,8 @@ namespace Collections.Extensions.SlotMaps
 
         public void RemoveRange(in ReadOnlySpan<SlotKey> keys)
         {
+            _version++;
+
             var pages = _pages;
             var pageLength = pages.Length;
             var pageSize = _pageSize;
@@ -501,6 +521,8 @@ namespace Collections.Extensions.SlotMaps
         /// </summary>
         public void Reset()
         {
+            _version++;
+
             var pages = _pages;
             var length = (uint)pages.Length;
 
@@ -595,5 +617,17 @@ namespace Collections.Extensions.SlotMaps
             key = default;
             address = default;
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public Enumerator GetEnumerator()
+            => new Enumerator(this);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        IEnumerator<KeyValuePair<SlotKey, T>> IEnumerable<KeyValuePair<SlotKey, T>>.GetEnumerator()
+            => new Enumerator(this);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        IEnumerator IEnumerable.GetEnumerator()
+            => new Enumerator(this);
     }
 }

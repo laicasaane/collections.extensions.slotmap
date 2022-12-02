@@ -7,8 +7,8 @@ namespace Collections.Extensions.SlotMaps
     {
         public struct Page
         {
-            private readonly SlotMeta[] _metas;
-            private readonly T[] _items;
+            internal readonly SlotMeta[] _metas;
+            internal readonly T[] _items;
 
             private uint _count;
 
