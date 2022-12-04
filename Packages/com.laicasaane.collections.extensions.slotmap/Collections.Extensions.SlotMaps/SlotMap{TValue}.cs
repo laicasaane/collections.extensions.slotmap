@@ -143,12 +143,12 @@ namespace Collections.Extensions.SlotMaps
 
         public void GetRange(
               in ReadOnlySpan<SlotKey> keys
-            , Span<TValue> returnSlots
+            , Span<TValue> returnValues
         )
         {
             Checks.Require(
-                  returnSlots.Length >= keys.Length
-                , $"The length `{nameof(returnSlots)}` must be greater than "
+                  returnValues.Length >= keys.Length
+                , $"The length `{nameof(returnValues)}` must be greater than "
                 + $"or equal to the length of `{nameof(keys)}`."
             );
 
@@ -169,7 +169,7 @@ namespace Collections.Extensions.SlotMaps
                 }
 
                 ref var page = ref pages[address.PageIndex];
-                returnSlots[i] = page.GetRef(address.SlotIndex, key);
+                returnValues[i] = page.GetRef(address.SlotIndex, key);
             }
         }
 

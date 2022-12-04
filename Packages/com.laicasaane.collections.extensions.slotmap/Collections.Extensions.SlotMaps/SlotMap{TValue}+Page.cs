@@ -56,7 +56,7 @@ namespace Collections.Extensions.SlotMaps
                 Checks.Require(meta.Version == key.Version
                     , $"Cannot get value because `key.Version` "
                     + $"is different from the current version. "
-                    + $"key.Version: {key.Version}. Current version: {meta.Version}. "
+                    + $"key.Version: {key.Version}. Current version: {meta.Version}."
                 );
 
                 return ref _values[index];
