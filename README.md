@@ -2,9 +2,10 @@
 
 ## Acknowledgement
 
-Inspired by:
+This library cannot exist without the knowledge and inspiration from:
 
 - https://github.com/SergeyMakeev/slot_map
+- https://floooh.github.io/2018/06/17/handles-vs-pointers.html
 
 ## Introduction
 
