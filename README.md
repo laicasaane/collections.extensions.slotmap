@@ -36,6 +36,7 @@ Debug.Assert(item01 == 9); // false
 var newKey01 = slotmap.Replace(key01, 53);
 Debug.Assert(slotmap.Get(newKey01) == 53); // true
 
-var newItem01 = slotmap.Get(key01); // exception: wrong version
-
+var newItem01 = slotmap.Get(key01);
+// SlotMapException: Cannot get value because `key.Version`
+// is different from the current version. key.Version: 1. Current version: 2.
 ```
