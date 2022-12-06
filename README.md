@@ -15,6 +15,42 @@ Great for storing collections of objects that need stable, safe references but h
 
 The difference between a `Dictionary<TKey, TValue>` and a `SlotMap<TValue>` is that the slot map generates and returns the key when adding a value. A key is always unique and will only refer to the value that was added.
 
+## Installation
+
+### Install via OpenUPM
+
+You can install this package from the [Open UPM](https://openupm.com/packages/com.laicasaane.collections.extensions.slotmap/) registry.
+
+More details [here](https://github.com/openupm/openupm-cli#installation).
+
+```
+openupm add org.nuget.system.runtime.compilerservices.unsafe
+openupm add com.laicasaane.collections.extensions.slotmap
+```
+
+
+### Install via Package Manager
+
+1. Open the **Poject Settings** window
+2. Navigate to the **Package Manager** section
+3. Add a new **Scoped Registry**
+
+```
+"name": "Unity NuGet",
+"url": "https://unitynuget-registry.azurewebsites.net",
+"scopes": [
+    "org.nuget"
+]
+```
+
+4. Open the **Package Manager** window
+5. Select the **Add package from git URL** option from the `+` dropdown
+6. Enter this git url:
+
+```
+https://github.com/laicasaane/collections.extensions.slotmap.git?path=Packages/com.laicasaane.collections.extensions.slotmap
+```
+
 ## Basic Usage
 
 ```cs
