@@ -37,6 +37,65 @@ namespace Collections.Extensions.SlotMaps
                 get => _denseIndices;
             }
 
+            internal SlotKey UpdateVersion(uint index, SlotKey key)
+            {
+                ref readonly var meta = ref _metas[index];
+
+                Checks.Require(meta.IsValid
+                    , $"Cannot get value because `{key}` is pointing to an invalid slot."
+                );
+
+                Checks.Require(meta.State != SlotState.Tombstone
+                    , $"Cannot get value because `{key}` is pointing to a dead slot."
+                );
+
+                Checks.Require(meta.State == SlotState.Occupied
+                    , $"Cannot get value because `{key}` is pointing to an empty slot."
+                );
+
+                return key.WithVersion(meta.Version);
+            }
+
+            public bool TryUpdateVersion(uint index, SlotKey key, out SlotKey newKey)
+            {
+                ref readonly var meta = ref _metas[index];
+
+                if (meta.IsValid == false)
+                {
+                    Checks.Warning(false
+                        , $"Cannot replace value because `{key}` is pointing to an invalid slot."
+                    );
+
+                    newKey = default;
+                    return false;
+                }
+
+                var state = meta.State;
+
+                if (state == SlotState.Tombstone)
+                {
+                    Checks.Warning(false
+                        , $"Cannot replace value because `{key}` is pointing to a dead slot."
+                    );
+
+                    newKey = default;
+                    return false;
+                }
+
+                if (state != SlotState.Occupied)
+                {
+                    Checks.Warning(false
+                        , $"Cannot replace value because `{key}` is pointing to an empty slot."
+                    );
+
+                    newKey = default;
+                    return false;
+                }
+
+                newKey = key.WithVersion(meta.Version);
+                return true;
+            }
+
             internal uint GetDenseIndex(uint index, SlotKey key)
             {
                 ref readonly var meta = ref _metas[index];

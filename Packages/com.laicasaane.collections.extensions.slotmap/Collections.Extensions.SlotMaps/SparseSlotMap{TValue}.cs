@@ -140,6 +140,8 @@ namespace Collections.Extensions.SlotMaps
 
         public TValue Get(SlotKey key)
         {
+            Checks.Require(key.IsValid, $"Key `{key}` is invalid.");
+
             var pageSize = _pageSize;
             var sparsePages = _sparsePages;
 
@@ -175,6 +177,8 @@ namespace Collections.Extensions.SlotMaps
             {
                 ref readonly var key = ref keys[i];
 
+                Checks.Require(key.IsValid, $"Key `{key}` is invalid.");
+
                 if (Utils.FindAddress(pageLength, pageSize, key, out var sparseAddress) == false)
                 {
                     throw new SlotMapException(
@@ -191,6 +195,8 @@ namespace Collections.Extensions.SlotMaps
 
         public ref readonly TValue GetRef(SlotKey key)
         {
+            Checks.Require(key.IsValid, $"Key `{key}` is invalid.");
+
             var pageSize = _pageSize;
             var sparsePages = _sparsePages;
 
@@ -207,6 +213,12 @@ namespace Collections.Extensions.SlotMaps
 
         public ref readonly TValue GetRefNotThrow(SlotKey key)
         {
+            if (key.IsValid == false)
+            {
+                Checks.Warning(false, $"Key `{key}` is invalid.");
+                return ref Unsafe.NullRef<TValue>();
+            }
+
             var pageSize = _pageSize;
             var sparsePages = _sparsePages;
 
@@ -229,6 +241,13 @@ namespace Collections.Extensions.SlotMaps
 
         public bool TryGet(SlotKey key, out TValue value)
         {
+            if (key.IsValid == false)
+            {
+                Checks.Warning(false, $"Key `{key}` is invalid.");
+                value = default;
+                return false;
+            }
+
             var pageSize = _pageSize;
             var sparsePages = _sparsePages;
 
@@ -291,6 +310,12 @@ namespace Collections.Extensions.SlotMaps
             for (var i = 0; i < length; i++)
             {
                 ref readonly var key = ref keys[i];
+
+                if (key.IsValid == false)
+                {
+                    Checks.Warning(false, $"Key `{key}` is invalid.");
+                    continue;
+                }
 
                 if (Utils.FindAddress(pageLength, pageSize, key, out var sparseAddress) == false)
                 {
@@ -503,6 +528,8 @@ namespace Collections.Extensions.SlotMaps
         {
             _version++;
 
+            Checks.Require(key.IsValid, $"Key `{key}` is invalid.");
+
             var sparsePages = _sparsePages;
             var pageSize = _pageSize;
             var pageLength = sparsePages.Length;
@@ -526,6 +553,15 @@ namespace Collections.Extensions.SlotMaps
 
         public bool TryReplace(SlotKey key, TValue value, out SlotKey newKey)
         {
+            _version++;
+
+            if (key.IsValid == false)
+            {
+                Checks.Warning(false, $"Key `{key}` is invalid.");
+                newKey = key;
+                return false;
+            }
+
             var sparsePages = _sparsePages;
             var pageSize = _pageSize;
             var pageLength = sparsePages.Length;
@@ -570,6 +606,12 @@ namespace Collections.Extensions.SlotMaps
         public bool Remove(SlotKey key)
         {
             _version++;
+
+            if (key.IsValid == false)
+            {
+                Checks.Warning(false, $"Key `{key}` is invalid.");
+                return false;
+            }
 
             var sparsePages = _sparsePages;
             var pageLength = sparsePages.Length;
@@ -653,6 +695,12 @@ namespace Collections.Extensions.SlotMaps
             {
                 ref readonly var key = ref keys[i];
 
+                if (key.IsValid == false)
+                {
+                    Checks.Warning(false, $"Key `{key}` is invalid.");
+                    continue;
+                }
+
                 if (Utils.FindAddress(pageLength, pageSize, key, out var sparseAddress) == false)
                 {
                     continue;
@@ -700,15 +748,53 @@ namespace Collections.Extensions.SlotMaps
 
         public bool Contains(SlotKey key)
         {
-            var sparsePages = _sparsePages;
+            if (key.IsValid == false)
+            {
+                Checks.Warning(false, $"Key `{key}` is invalid.");
+                return false;
+            }
 
-            if (Utils.FindAddress(sparsePages.Length, _pageSize, key, out var address) == false)
+            if (Utils.FindAddress(_sparsePages.Length, _pageSize, key, out var address) == false)
             {
                 return false;
             }
 
-            ref var sparsePage = ref sparsePages[address.PageIndex];
+            ref var sparsePage = ref _sparsePages[address.PageIndex];
             return sparsePage.Contains(address.SlotIndex, key);
+        }
+
+        public SlotKey UpdateVersion(SlotKey key)
+        {
+            Checks.Require(key.IsValid, $"Key `{key}` is invalid.");
+
+            if (Utils.FindAddress(_sparsePages.Length, _pageSize, key, out var address) == false)
+            {
+                Checks.Require(false, $"Cannot update version for `{key}`.");
+                return default;
+            }
+
+            ref var sparsePage = ref _sparsePages[address.PageIndex];
+            return sparsePage.UpdateVersion(address.SlotIndex, key);
+        }
+
+        public bool TryUpdateVersion(SlotKey key, out SlotKey newKey)
+        {
+            if (key.IsValid == false)
+            {
+                Checks.Warning(false, $"Key `{key}` is invalid.");
+                newKey = key;
+                return false;
+            }
+
+            if (Utils.FindAddress(_sparsePages.Length, _pageSize, key, out var address) == false)
+            {
+                Checks.Warning(false, $"Cannot update version for `{key}`.");
+                newKey = key;
+                return false;
+            }
+
+            ref var sparsePage = ref _sparsePages[address.PageIndex];
+            return sparsePage.TryUpdateVersion(address.SlotIndex, key, out newKey);
         }
 
         /// <summary>

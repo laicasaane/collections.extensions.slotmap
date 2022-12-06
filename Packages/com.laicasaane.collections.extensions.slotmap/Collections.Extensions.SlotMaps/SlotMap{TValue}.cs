@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using UnityEngine;
 
 namespace Collections.Extensions.SlotMaps
 {
@@ -132,6 +133,8 @@ namespace Collections.Extensions.SlotMaps
 
         public TValue Get(SlotKey key)
         {
+            Checks.Require(key.IsValid, $"Key `{key}` is invalid.");
+
             if (Utils.FindAddress(_pages.Length, _pageSize, key, out var address) == false)
             {
                 throw new SlotMapException($"Cannot find address for `{key}`.");
@@ -161,11 +164,12 @@ namespace Collections.Extensions.SlotMaps
             {
                 ref readonly var key = ref keys[i];
 
+                Checks.Require(key.IsValid, $"Key `{key}` is invalid.");
+
                 if (Utils.FindAddress(pageLength, pageSize, key, out var address) == false)
                 {
-                    throw new SlotMapException(
-                        $"Cannot find address for `{key}` at index {i}."
-                    );
+                    Checks.Require(false, $"Cannot find address for `{key}` at index {i}.");
+                    continue;
                 }
 
                 ref var page = ref pages[address.PageIndex];
@@ -175,9 +179,12 @@ namespace Collections.Extensions.SlotMaps
 
         public ref readonly TValue GetRef(SlotKey key)
         {
+            Checks.Require(key.IsValid, $"Key `{key}` is invalid.");
+
             if (Utils.FindAddress(_pages.Length, _pageSize, key, out var address) == false)
             {
-                throw new SlotMapException($"Cannot find address for `{key}`.");
+                Checks.Require(false, $"Cannot find address for `{key}`.");
+                return ref Unsafe.NullRef<TValue>();
             }
 
             ref var page = ref _pages[address.PageIndex];
@@ -186,6 +193,12 @@ namespace Collections.Extensions.SlotMaps
 
         public ref readonly TValue GetRefNotThrow(SlotKey key)
         {
+            if (key.IsValid == false)
+            {
+                Checks.Warning(false, $"Key `{key}` is invalid.");
+                return ref Unsafe.NullRef<TValue>();
+            }
+
             if (Utils.FindAddress(_pages.Length, _pageSize, key, out var address) == false)
             {
                 Checks.Warning(false, $"Cannot find address for `{key}`.");
@@ -198,6 +211,13 @@ namespace Collections.Extensions.SlotMaps
 
         public bool TryGet(SlotKey key, out TValue value)
         {
+            if (key.IsValid == false)
+            {
+                Checks.Warning(false, $"Key `{key}` is invalid.");
+                value = default;
+                return false;
+            }
+
             if (Utils.FindAddress(_pages.Length, _pageSize, key, out var address) == false)
             {
                 Checks.Warning(false, $"Cannot find address for `{key}`.");
@@ -257,6 +277,12 @@ namespace Collections.Extensions.SlotMaps
             {
                 ref readonly var key = ref keys[i];
 
+                if (key.IsValid == false)
+                {
+                    Checks.Warning(false, $"Key `{key}` is invalid.");
+                    continue;
+                }
+
                 if (Utils.FindAddress(pageLength, pageSize, key, out var address) == false)
                 {
                     continue;
@@ -285,7 +311,8 @@ namespace Collections.Extensions.SlotMaps
 
             if (TryGetNewKey(out var key, out var address) == false)
             {
-                throw new SlotMapException($"Cannot add `{value} ` to {s_name}.");
+                Checks.Require(false, $"Cannot add `{value} ` to {s_name}.");
+                return default;
             }
 
             ref var page = ref _pages[address.PageIndex];
@@ -318,9 +345,8 @@ namespace Collections.Extensions.SlotMaps
 
                 if (TryGetNewKey(out var key, out var address) == false)
                 {
-                    throw new SlotMapException(
-                        $"Cannot add `{value}` to {s_name} at index {i}."
-                    );
+                    Checks.Require(false, $"Cannot add `{value}` to {s_name} at index {i}.");
+                    continue;
                 }
 
                 ref var page = ref pages[address.PageIndex];
@@ -357,6 +383,8 @@ namespace Collections.Extensions.SlotMaps
             , out uint returnKeyCount
         )
         {
+            _version++;
+
             if (returnKeys.Length < values.Length)
             {
                 Checks.Warning(false
@@ -367,8 +395,6 @@ namespace Collections.Extensions.SlotMaps
                 returnKeyCount = 0;
                 return false;
             }
-
-            _version++;
 
             var pages = _pages;
             var length = values.Length;
@@ -407,9 +433,12 @@ namespace Collections.Extensions.SlotMaps
         {
             _version++;
 
+            Checks.Require(key.IsValid, $"Key `{key}` is invalid.");
+
             if (Utils.FindAddress(_pages.Length, _pageSize, key, out var address) == false)
             {
-                throw new SlotMapException($"Cannot replace `{value}` in {s_name}.");
+                Checks.Require(false, $"Cannot replace `{value}` in {s_name}.");
+                return default;
             }
 
             ref var page = ref _pages[address.PageIndex];
@@ -419,6 +448,13 @@ namespace Collections.Extensions.SlotMaps
         public bool TryReplace(SlotKey key, TValue value, out SlotKey newKey)
         {
             _version++;
+
+            if (key.IsValid == false)
+            {
+                Checks.Warning(key.IsValid, $"Key `{key}` is invalid.");
+                newKey = key;
+                return false;
+            }
 
             if (Utils.FindAddress(_pages.Length, _pageSize, key, out var address) == false)
             {
@@ -433,6 +469,12 @@ namespace Collections.Extensions.SlotMaps
         public bool Remove(SlotKey key)
         {
             _version++;
+
+            if (key.IsValid == false)
+            {
+                Checks.Warning(key.IsValid, $"Key `{key}` is invalid.");
+                return false;
+            }
 
             var pages = _pages;
             var pageLength = pages.Length;
@@ -480,6 +522,12 @@ namespace Collections.Extensions.SlotMaps
             {
                 ref readonly var key = ref keys[i];
 
+                if (key.IsValid == false)
+                {
+                    Checks.Warning(key.IsValid, $"Key `{key}` is invalid.");
+                    continue;
+                }
+
                 if (Utils.FindAddress(pageLength, pageSize, key, out var address) == false)
                 {
                     continue;
@@ -507,6 +555,12 @@ namespace Collections.Extensions.SlotMaps
 
         public bool Contains(SlotKey key)
         {
+            if (key.IsValid == false)
+            {
+                Checks.Warning(false, $"Key `{key}` is invalid.");
+                return false;
+            }
+
             if (Utils.FindAddress(_pages.Length, _pageSize, key, out var address) == false)
             {
                 return false;
@@ -514,6 +568,40 @@ namespace Collections.Extensions.SlotMaps
 
             ref var page = ref _pages[address.PageIndex];
             return page.Contains(address.SlotIndex, key);
+        }
+
+        public SlotKey UpdateVersion(SlotKey key)
+        {
+            Checks.Require(key.IsValid, $"Key `{key}` is invalid.");
+
+            if (Utils.FindAddress(_pages.Length, _pageSize, key, out var address) == false)
+            {
+                Checks.Require(false, $"Cannot update version for `{key}`.");
+                return default;
+            }
+
+            ref var page = ref _pages[address.PageIndex];
+            return page.UpdateVersion(address.SlotIndex, key);
+        }
+
+        public bool TryUpdateVersion(SlotKey key, out SlotKey newKey)
+        {
+            if (key.IsValid == false)
+            {
+                Checks.Warning(false, $"Key `{key}` is invalid.");
+                newKey = key;
+                return false;
+            }
+
+            if (Utils.FindAddress(_pages.Length, _pageSize, key, out var address) == false)
+            {
+                Checks.Warning(false, $"Cannot update version for `{key}`.");
+                newKey = key;
+                return false;
+            }
+
+            ref var page = ref _pages[address.PageIndex];
+            return page.TryUpdateVersion(address.SlotIndex, key, out newKey);
         }
 
         /// <summary>
@@ -574,10 +662,7 @@ namespace Collections.Extensions.SlotMaps
             return true;
         }
 
-        private bool TryReuseFreeKey(
-              out SlotKey key
-            , out SlotAddress address
-        )
+        private bool TryReuseFreeKey(out SlotKey key, out SlotAddress address)
         {
             var pageSize = _pageSize;
             var freeKeys = _freeKeys;

@@ -25,7 +25,7 @@ namespace Collections.Extensions.SlotMaps
 
         ref readonly TValue GetRefNotThrow(SlotKey key);
 
-        bool TryGet(SlotKey key, out TValue item);
+        bool TryGet(SlotKey key, out TValue value);
 
         bool TryGetRange(
               in ReadOnlySpan<SlotKey> keys
@@ -33,6 +33,10 @@ namespace Collections.Extensions.SlotMaps
             , Span<TValue> returnValues
             , out uint returnItemCount
         );
+
+        SlotKey UpdateVersion(SlotKey key);
+
+        bool TryUpdateVersion(SlotKey key, out SlotKey newKey);
     }
 
     public interface ISlotMap<TValue> : IReadOnlySlotMap<TValue>
