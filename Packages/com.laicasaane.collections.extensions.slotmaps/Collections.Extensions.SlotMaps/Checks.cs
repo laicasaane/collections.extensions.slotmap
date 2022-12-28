@@ -7,7 +7,7 @@ using System.Diagnostics;
 
 namespace Collections.Extensions.SlotMaps
 {
-    internal static class Checks
+    public static class Checks
     {
 #if DISABLE_SLOTMAP_CHECKS
         [Conditional("__SLOTMAP_CHECKS_NEVER_DEFINED__")]

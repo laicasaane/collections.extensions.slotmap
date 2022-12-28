@@ -1,7 +1,7 @@
 {
   "dependencies": {
     "com.laicasaane.collections.extensions.slotmaps": {
-      "version": "file:com.laicasaane.collections.extensions.slotmap",
+      "version": "file:com.laicasaane.collections.extensions.slotmaps",
       "depth": 0,
       "source": "embedded",
       "dependencies": {
