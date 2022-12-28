@@ -1,7 +1,7 @@
 {
     "name": "com.laicasaane.collections.extensions.slotmaps",
     "displayName": "Collections.Extensions.SlotMaps",
-    "version": "1.1.0",
+    "version": "1.1.1",
     "unity": "2021.3",
     "documentationUrl": "https://github.com/laicasaane/collections.extensions.slotmap/blob/main/README.md",
     "dependencies": {
