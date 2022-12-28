@@ -21,10 +21,6 @@ namespace Collections.Extensions.SlotMaps
 
         void GetRange(in ReadOnlySpan<SlotKey> keys, Span<TValue> returnItems);
 
-        ref readonly TValue GetRef(SlotKey key);
-
-        ref readonly TValue GetRefNotThrow(SlotKey key);
-
         bool TryGet(SlotKey key, out TValue value);
 
         bool TryGetRange(
