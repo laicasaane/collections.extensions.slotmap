@@ -1,7 +1,11 @@
 {
     "name": "Collections.Extensions.SlotMaps",
     "rootNamespace": "Collections.Extensions.SlotMaps",
-    "references": [],
+    "references": [
+        "Unity.Burst",
+        "Unity.Collections",
+        "Unity.Logging"
+    ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
@@ -9,6 +13,22 @@
     "precompiledReferences": [],
     "autoReferenced": true,
     "defineConstraints": [],
-    "versionDefines": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.burst",
+            "expression": "",
+            "define": "__SLOTMAP_UNITY_BURST__"
+        },
+        {
+            "name": "com.unity.collections",
+            "expression": "",
+            "define": "__SLOTMAP_UNITY_COLLECTIONS__"
+        },
+        {
+            "name": "com.unity.logging",
+            "expression": "",
+            "define": "__SLOTMAP_UNITY_LOGGING__"
+        }
+    ],
     "noEngineReferences": false
 }

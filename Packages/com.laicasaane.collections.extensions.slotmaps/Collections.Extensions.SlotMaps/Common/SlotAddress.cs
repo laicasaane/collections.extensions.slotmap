@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 namespace Collections.Extensions.SlotMaps
 {
     [StructLayout(LayoutKind.Explicit)]
-    public readonly struct SlotAddress : IEquatable<SlotAddress>
+    internal readonly struct SlotAddress : IEquatable<SlotAddress>
     {
         public static readonly SlotAddress MinValue = new(uint.MinValue, uint.MinValue);
         public static readonly SlotAddress MaxValue = new(uint.MaxValue, uint.MaxValue);

@@ -37,10 +37,10 @@ namespace Collections.Extensions.SlotMaps
                 : ARRAY_MAX_LENGTH;
         }
 
-        public static bool FindAddress(
+        internal static bool FindAddress(
               int pageLength
             , uint pageSize
-            , SlotKey key
+            , in SlotKey key
             , out SlotAddress address
         )
         {
