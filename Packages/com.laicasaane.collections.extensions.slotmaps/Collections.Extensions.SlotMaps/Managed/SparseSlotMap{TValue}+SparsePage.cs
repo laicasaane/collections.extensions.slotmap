@@ -43,7 +43,7 @@ namespace Collections.Extensions.SlotMaps
                 get => _denseIndices;
             }
 
-            internal SlotKey UpdateVersion(uint index, SlotKey key)
+            internal SlotKey UpdateVersion(uint index, in SlotKey key)
             {
                 ref readonly var meta = ref _metas[index];
 
@@ -62,7 +62,7 @@ namespace Collections.Extensions.SlotMaps
                 return key.WithVersion(meta.Version);
             }
 
-            public bool TryUpdateVersion(uint index, SlotKey key, out SlotKey newKey)
+            public bool TryUpdateVersion(uint index, in SlotKey key, out SlotKey newKey)
             {
                 ref readonly var meta = ref _metas[index];
 
@@ -102,7 +102,7 @@ namespace Collections.Extensions.SlotMaps
                 return true;
             }
 
-            internal uint GetDenseIndex(uint index, SlotKey key)
+            internal uint GetDenseIndex(uint index, in SlotKey key)
             {
                 ref readonly var meta = ref _metas[index];
 
@@ -127,7 +127,7 @@ namespace Collections.Extensions.SlotMaps
                 return _denseIndices[index];
             }
 
-            internal bool TryGetDenseIndex(uint index, SlotKey key, out uint denseIndex)
+            internal bool TryGetDenseIndex(uint index, in SlotKey key, out uint denseIndex)
             {
                 ref readonly var meta = ref _metas[index];
 
@@ -179,7 +179,7 @@ namespace Collections.Extensions.SlotMaps
                 return true;
             }
 
-            internal void Add(uint index, SlotKey key, uint denseIndex)
+            internal void Add(uint index, in SlotKey key, uint denseIndex)
             {
                 ref var meta = ref _metas[index];
 
@@ -204,7 +204,7 @@ namespace Collections.Extensions.SlotMaps
                 _count++;
             }
 
-            public bool TryAdd(uint index, SlotKey key, uint denseIndex)
+            public bool TryAdd(uint index, in SlotKey key, uint denseIndex)
             {
                 ref var meta = ref _metas[index];
                 var state = meta.State;
@@ -247,7 +247,7 @@ namespace Collections.Extensions.SlotMaps
                 return true;
             }
 
-            internal SlotKey Replace(uint index, SlotKey key, uint denseIndex)
+            internal SlotKey Replace(uint index, in SlotKey key, uint denseIndex)
             {
                 ref var meta = ref _metas[index];
 
@@ -284,7 +284,7 @@ namespace Collections.Extensions.SlotMaps
                 return key.WithVersion(currentVersion);
             }
 
-            internal bool TryReplace(uint index, SlotKey key, uint denseIndex, out SlotKey newKey)
+            internal bool TryReplace(uint index, in SlotKey key, uint denseIndex, out SlotKey newKey)
             {
                 ref var meta = ref _metas[index];
 
@@ -358,7 +358,7 @@ namespace Collections.Extensions.SlotMaps
             internal void ReplaceDenseIndexUnsafe(uint index, uint denseIndex)
                 => _denseIndices[index] = denseIndex;
 
-            internal bool Remove(uint index, SlotKey key, out uint denseIndex)
+            internal bool Remove(uint index, in SlotKey key, out uint denseIndex)
             {
                 ref var meta = ref _metas[index];
 
@@ -419,7 +419,7 @@ namespace Collections.Extensions.SlotMaps
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            internal bool Contains(uint index, SlotKey key)
+            internal bool Contains(uint index, in SlotKey key)
             {
                 ref readonly var meta = ref _metas[index];
                 return meta.IsValid

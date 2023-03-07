@@ -143,7 +143,7 @@ namespace Collections.Extensions.SlotMaps
             get => _pages;
         }
 
-        public TValue Get(SlotKey key)
+        public TValue Get(in SlotKey key)
         {
             Checks.Require(key.IsValid, $"Key `{key}` is invalid.");
 
@@ -158,7 +158,7 @@ namespace Collections.Extensions.SlotMaps
 
         public void GetRange(
               in ReadOnlySpan<SlotKey> keys
-            , Span<TValue> returnValues
+            , in Span<TValue> returnValues
         )
         {
             Checks.Require(
@@ -189,7 +189,7 @@ namespace Collections.Extensions.SlotMaps
             }
         }
 
-        public ref readonly TValue GetRef(SlotKey key)
+        public ref readonly TValue GetRef(in SlotKey key)
         {
             Checks.Require(key.IsValid, $"Key `{key}` is invalid.");
 
@@ -203,7 +203,7 @@ namespace Collections.Extensions.SlotMaps
             return ref page.GetRef(address.SlotIndex, key);
         }
 
-        public ref readonly TValue GetRefNotThrow(SlotKey key)
+        public ref readonly TValue GetRefNotThrow(in SlotKey key)
         {
             if (key.IsValid == false)
             {
@@ -221,7 +221,7 @@ namespace Collections.Extensions.SlotMaps
             return ref page.GetRefNotThrow(address.SlotIndex, key);
         }
 
-        public bool TryGet(SlotKey key, out TValue value)
+        public bool TryGet(in SlotKey key, out TValue value)
         {
             if (key.IsValid == false)
             {
@@ -252,8 +252,8 @@ namespace Collections.Extensions.SlotMaps
 
         public bool TryGetRange(
               in ReadOnlySpan<SlotKey> keys
-            , Span<SlotKey> returnKeys
-            , Span<TValue> returnValues
+            , in Span<SlotKey> returnKeys
+            , in Span<TValue> returnValues
             , out uint returnValuesCount
         )
         {
@@ -335,7 +335,7 @@ namespace Collections.Extensions.SlotMaps
 
         public void AddRange(
               in ReadOnlySpan<TValue> values
-            , Span<SlotKey> returnKeys
+            , in Span<SlotKey> returnKeys
         )
         {
             Checks.Require(
@@ -391,7 +391,7 @@ namespace Collections.Extensions.SlotMaps
 
         public bool TryAddRange(
               in ReadOnlySpan<TValue> values
-            , Span<SlotKey> returnKeys
+            , in Span<SlotKey> returnKeys
             , out uint returnKeyCount
         )
         {
@@ -441,7 +441,7 @@ namespace Collections.Extensions.SlotMaps
             return true;
         }
 
-        public SlotKey Replace(SlotKey key, TValue value)
+        public SlotKey Replace(in SlotKey key, TValue value)
         {
             _version++;
 
@@ -457,7 +457,7 @@ namespace Collections.Extensions.SlotMaps
             return page.Replace(address.SlotIndex, key, value);
         }
 
-        public bool TryReplace(SlotKey key, TValue value, out SlotKey newKey)
+        public bool TryReplace(in SlotKey key, TValue value, out SlotKey newKey)
         {
             _version++;
 
@@ -478,7 +478,7 @@ namespace Collections.Extensions.SlotMaps
             return page.TryReplace(address.SlotIndex, key, value, out newKey);
         }
 
-        public bool Remove(SlotKey key)
+        public bool Remove(in SlotKey key)
         {
             _version++;
 
@@ -565,7 +565,7 @@ namespace Collections.Extensions.SlotMaps
             }
         }
 
-        public bool Contains(SlotKey key)
+        public bool Contains(in SlotKey key)
         {
             if (key.IsValid == false)
             {
@@ -582,7 +582,7 @@ namespace Collections.Extensions.SlotMaps
             return page.Contains(address.SlotIndex, key);
         }
 
-        public SlotKey UpdateVersion(SlotKey key)
+        public SlotKey UpdateVersion(in SlotKey key)
         {
             Checks.Require(key.IsValid, $"Key `{key}` is invalid.");
 
@@ -596,7 +596,7 @@ namespace Collections.Extensions.SlotMaps
             return page.UpdateVersion(address.SlotIndex, key);
         }
 
-        public bool TryUpdateVersion(SlotKey key, out SlotKey newKey)
+        public bool TryUpdateVersion(in SlotKey key, out SlotKey newKey)
         {
             if (key.IsValid == false)
             {
