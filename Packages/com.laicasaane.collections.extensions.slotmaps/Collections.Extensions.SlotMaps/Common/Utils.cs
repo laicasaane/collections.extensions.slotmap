@@ -37,11 +37,11 @@ namespace Collections.Extensions.SlotMaps
                 : ARRAY_MAX_LENGTH;
         }
 
-        internal static bool FindAddress(
+        internal static bool FindPagedAddress(
               int pageLength
             , uint pageSize
             , in SlotKey key
-            , out SlotAddress address
+            , out PagedAddress address
         )
         {
             if (key.IsValid == false)
@@ -52,7 +52,7 @@ namespace Collections.Extensions.SlotMaps
                 return false;
             }
 
-            address = SlotAddress.FromIndex(key.Index, pageSize);
+            address = PagedAddress.FromIndex(key.Index, pageSize);
             var pageCount = (uint)pageLength;
 
             if (address.PageIndex >= pageCount)

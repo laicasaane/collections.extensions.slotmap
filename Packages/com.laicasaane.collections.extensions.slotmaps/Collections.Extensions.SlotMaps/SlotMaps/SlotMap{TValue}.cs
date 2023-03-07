@@ -134,7 +134,7 @@ namespace Collections.Extensions.SlotMaps
         {
             Checks.Require(key.IsValid, $"Key `{key}` is invalid.");
 
-            if (Utils.FindAddress(_pages.Length, _pageSize, key, out var address) == false)
+            if (Utils.FindPagedAddress(_pages.Length, _pageSize, key, out var address) == false)
             {
                 throw new SlotMapException($"Cannot find address for `{key}`.");
             }
@@ -165,7 +165,7 @@ namespace Collections.Extensions.SlotMaps
 
                 Checks.Require(key.IsValid, $"Key `{key}` is invalid.");
 
-                if (Utils.FindAddress(pageLength, pageSize, key, out var address) == false)
+                if (Utils.FindPagedAddress(pageLength, pageSize, key, out var address) == false)
                 {
                     Checks.Require(false, $"Cannot find address for `{key}` at index {i}.");
                     continue;
@@ -180,7 +180,7 @@ namespace Collections.Extensions.SlotMaps
         {
             Checks.Require(key.IsValid, $"Key `{key}` is invalid.");
 
-            if (Utils.FindAddress(_pages.Length, _pageSize, key, out var address) == false)
+            if (Utils.FindPagedAddress(_pages.Length, _pageSize, key, out var address) == false)
             {
                 Checks.Require(false, $"Cannot find address for `{key}`.");
                 return ref Unsafe.NullRef<TValue>();
@@ -198,7 +198,7 @@ namespace Collections.Extensions.SlotMaps
                 return ref Unsafe.NullRef<TValue>();
             }
 
-            if (Utils.FindAddress(_pages.Length, _pageSize, key, out var address) == false)
+            if (Utils.FindPagedAddress(_pages.Length, _pageSize, key, out var address) == false)
             {
                 Checks.Warning(false, $"Cannot find address for `{key}`.");
                 return ref Unsafe.NullRef<TValue>();
@@ -217,7 +217,7 @@ namespace Collections.Extensions.SlotMaps
                 return false;
             }
 
-            if (Utils.FindAddress(_pages.Length, _pageSize, key, out var address) == false)
+            if (Utils.FindPagedAddress(_pages.Length, _pageSize, key, out var address) == false)
             {
                 Checks.Warning(false, $"Cannot find address for `{key}`.");
                 value = default;
@@ -282,7 +282,7 @@ namespace Collections.Extensions.SlotMaps
                     continue;
                 }
 
-                if (Utils.FindAddress(pageLength, pageSize, key, out var address) == false)
+                if (Utils.FindPagedAddress(pageLength, pageSize, key, out var address) == false)
                 {
                     continue;
                 }
@@ -434,7 +434,7 @@ namespace Collections.Extensions.SlotMaps
 
             Checks.Require(key.IsValid, $"Key `{key}` is invalid.");
 
-            if (Utils.FindAddress(_pages.Length, _pageSize, key, out var address) == false)
+            if (Utils.FindPagedAddress(_pages.Length, _pageSize, key, out var address) == false)
             {
                 Checks.Require(false, $"Cannot replace `{value}` in {s_name}.");
                 return default;
@@ -455,7 +455,7 @@ namespace Collections.Extensions.SlotMaps
                 return false;
             }
 
-            if (Utils.FindAddress(_pages.Length, _pageSize, key, out var address) == false)
+            if (Utils.FindPagedAddress(_pages.Length, _pageSize, key, out var address) == false)
             {
                 newKey = key;
                 return false;
@@ -478,7 +478,7 @@ namespace Collections.Extensions.SlotMaps
             var pages = _pages;
             var pageLength = pages.Length;
 
-            if (Utils.FindAddress(pageLength, _pageSize, key, out var address) == false)
+            if (Utils.FindPagedAddress(pageLength, _pageSize, key, out var address) == false)
             {
                 return false;
             }
@@ -527,7 +527,7 @@ namespace Collections.Extensions.SlotMaps
                     continue;
                 }
 
-                if (Utils.FindAddress(pageLength, pageSize, key, out var address) == false)
+                if (Utils.FindPagedAddress(pageLength, pageSize, key, out var address) == false)
                 {
                     continue;
                 }
@@ -560,7 +560,7 @@ namespace Collections.Extensions.SlotMaps
                 return false;
             }
 
-            if (Utils.FindAddress(_pages.Length, _pageSize, key, out var address) == false)
+            if (Utils.FindPagedAddress(_pages.Length, _pageSize, key, out var address) == false)
             {
                 return false;
             }
@@ -573,7 +573,7 @@ namespace Collections.Extensions.SlotMaps
         {
             Checks.Require(key.IsValid, $"Key `{key}` is invalid.");
 
-            if (Utils.FindAddress(_pages.Length, _pageSize, key, out var address) == false)
+            if (Utils.FindPagedAddress(_pages.Length, _pageSize, key, out var address) == false)
             {
                 Checks.Require(false, $"Cannot update version for `{key}`.");
                 return default;
@@ -592,7 +592,7 @@ namespace Collections.Extensions.SlotMaps
                 return false;
             }
 
-            if (Utils.FindAddress(_pages.Length, _pageSize, key, out var address) == false)
+            if (Utils.FindPagedAddress(_pages.Length, _pageSize, key, out var address) == false)
             {
                 Checks.Warning(false, $"Cannot update version for `{key}`.");
                 newKey = key;
@@ -628,7 +628,7 @@ namespace Collections.Extensions.SlotMaps
             _tombstoneCount = 0;
         }
 
-        private bool TryGetNewKey(out SlotKey key, out SlotAddress address)
+        private bool TryGetNewKey(out SlotKey key, out PagedAddress address)
         {
             if (TryReuseFreeKey(out key, out address))
             {
@@ -661,7 +661,7 @@ namespace Collections.Extensions.SlotMaps
             return true;
         }
 
-        private bool TryReuseFreeKey(out SlotKey key, out SlotAddress address)
+        private bool TryReuseFreeKey(out SlotKey key, out PagedAddress address)
         {
             var pageSize = _pageSize;
             var freeKeys = _freeKeys;
@@ -674,7 +674,7 @@ namespace Collections.Extensions.SlotMaps
 
             var oldKey = freeKeys.Dequeue();
             key = oldKey.WithVersion(oldKey.Version + 1);
-            address = SlotAddress.FromIndex(key.Index, pageSize);
+            address = PagedAddress.FromIndex(key.Index, pageSize);
             return true;
         }
 
@@ -699,7 +699,7 @@ namespace Collections.Extensions.SlotMaps
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void SetDefault(out SlotKey key, out SlotAddress address)
+        private static void SetDefault(out SlotKey key, out PagedAddress address)
         {
             key = default;
             address = default;

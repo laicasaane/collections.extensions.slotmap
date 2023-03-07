@@ -5,10 +5,10 @@ using System.Runtime.InteropServices;
 namespace Collections.Extensions.SlotMaps
 {
     [StructLayout(LayoutKind.Explicit)]
-    internal readonly struct SlotAddress : IEquatable<SlotAddress>
+    internal readonly struct PagedAddress : IEquatable<PagedAddress>
     {
-        public static readonly SlotAddress MinValue = new(uint.MinValue, uint.MinValue);
-        public static readonly SlotAddress MaxValue = new(uint.MaxValue, uint.MaxValue);
+        public static readonly PagedAddress MinValue = new(uint.MinValue, uint.MinValue);
+        public static readonly PagedAddress MaxValue = new(uint.MaxValue, uint.MaxValue);
 
         [FieldOffset(0)]
         private readonly ulong _raw;
@@ -19,7 +19,7 @@ namespace Collections.Extensions.SlotMaps
         [FieldOffset(4)]
         private readonly uint _pageIndex;
 
-        public SlotAddress(uint pageIndex, uint slotIndex) : this()
+        public PagedAddress(uint pageIndex, uint slotIndex) : this()
         {
             _pageIndex = pageIndex;
             _slotIndex = slotIndex;
@@ -53,11 +53,11 @@ namespace Collections.Extensions.SlotMaps
         public override string ToString()
             => $"({_pageIndex}, {_slotIndex})";
 
-        public bool Equals(SlotAddress other)
+        public bool Equals(PagedAddress other)
             => _raw == other._raw;
 
         public override bool Equals(object obj)
-            => obj is SlotAddress other && _raw == other._raw;
+            => obj is PagedAddress other && _raw == other._raw;
 
         public override int GetHashCode()
             => _raw.GetHashCode();
@@ -102,31 +102,31 @@ namespace Collections.Extensions.SlotMaps
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static SlotAddress FromIndex(uint index, uint pageSize)
+        public static PagedAddress FromIndex(uint index, uint pageSize)
             => new(index / pageSize, index % pageSize);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static SlotAddress FromIndex(long index, uint pageSize)
+        public static PagedAddress FromIndex(long index, uint pageSize)
             => new((uint)(index / pageSize), (uint)(index % pageSize));
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static implicit operator ulong(SlotAddress value)
+        public static implicit operator ulong(PagedAddress value)
             => value._raw;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool operator ==(SlotAddress lhs, SlotAddress rhs)
+        public static bool operator ==(PagedAddress lhs, PagedAddress rhs)
             => lhs._raw == rhs._raw;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool operator !=(SlotAddress lhs, SlotAddress rhs)
+        public static bool operator !=(PagedAddress lhs, PagedAddress rhs)
             => lhs._raw != rhs._raw;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool operator <(SlotAddress lhs, SlotAddress rhs)
+        public static bool operator <(PagedAddress lhs, PagedAddress rhs)
             => lhs._raw < rhs._raw;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool operator >(SlotAddress lhs, SlotAddress rhs)
+        public static bool operator >(PagedAddress lhs, PagedAddress rhs)
             => lhs._raw > rhs._raw;
     }
 }

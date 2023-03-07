@@ -57,10 +57,10 @@ namespace Collections.Extensions.SlotMaps
                 )
                 {
                     var pageSize = slotmap._pageSize;
-                    var denseAddress = SlotAddress.FromIndex(_denseIndex, pageSize);
+                    var denseAddress = PagedAddress.FromIndex(_denseIndex, pageSize);
                     var densePage = slotmap._densePages[denseAddress.PageIndex];
                     var sparseIndex = densePage._sparseIndices[denseAddress.SlotIndex];
-                    var sparseAddress = SlotAddress.FromIndex(sparseIndex, pageSize);
+                    var sparseAddress = PagedAddress.FromIndex(sparseIndex, pageSize);
                     var sparsePage = slotmap._sparsePages[sparseAddress.PageIndex];
                     ref var meta = ref sparsePage._metas[sparseAddress.SlotIndex];
 

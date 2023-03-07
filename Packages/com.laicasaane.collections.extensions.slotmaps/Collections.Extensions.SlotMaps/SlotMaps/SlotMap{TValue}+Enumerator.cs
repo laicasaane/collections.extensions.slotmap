@@ -74,7 +74,7 @@ namespace Collections.Extensions.SlotMaps
 
                         if (meta.IsValid && meta.State == SlotState.Occupied)
                         {
-                            var address = new SlotAddress(iPage, iValue);
+                            var address = new PagedAddress(iPage, iValue);
                             var index = address.ToIndex(pageSize);
                             _current = new(new(index, meta.Version), values[iValue]);
                             _pageIndex = iPage;
