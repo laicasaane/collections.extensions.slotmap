@@ -7,10 +7,6 @@ namespace Collections.Extensions.SlotMaps
     {
         uint FreeIndicesLimit { get; }
 
-        uint PageSize { get; }
-
-        int PageCount { get; }
-
         uint SlotCount { get; }
 
         uint TombstoneCount { get; }

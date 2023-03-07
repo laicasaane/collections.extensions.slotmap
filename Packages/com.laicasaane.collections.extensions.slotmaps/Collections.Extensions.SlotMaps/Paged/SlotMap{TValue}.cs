@@ -5,7 +5,7 @@ using System.Runtime.CompilerServices;
 
 namespace Collections.Extensions.SlotMaps
 {
-    public partial class SlotMap<TValue> : ISlotMap<TValue>
+    public partial class SlotMap<TValue> : IPagedSlotMap<TValue>
     {
         private static readonly string s_name = $"{nameof(SlotMap<TValue>)}<{typeof(TValue).Name}>";
         private static readonly bool s_valueIsUnmanaged = RuntimeHelpers.IsReferenceOrContainsReferences<TValue>();
