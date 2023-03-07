@@ -60,10 +60,7 @@ namespace Collections.Extensions.SlotMaps
 
             Checks.Warning(
                   _freeIndicesLimit <= _pageSize
-                , $"`{nameof(freeIndicesLimit)}` should be lesser than "
-                + $"or equal to `{nameof(pageSize)}: {_pageSize}`, "
-                + $"or it would be clamped to `{nameof(_pageSize)}`. "
-                + $"Value: {_freeIndicesLimit}."
+                , $"`{nameof(freeIndicesLimit)}` should be lesser than or equal to {_pageSize}."
             );
 
             _maxPageCount = Utils.GetMaxPageCount(_pageSize);
@@ -163,8 +160,7 @@ namespace Collections.Extensions.SlotMaps
         {
             Checks.Require(
                   returnValues.Length >= keys.Length
-                , $"The length `{nameof(returnValues)}` must be greater than "
-                + $"or equal to the length of `{nameof(keys)}`."
+                , $"{nameof(returnValues)}.Length must be greater than or equal to {nameof(keys)}.Length."
             );
 
             var pages = _pages;
@@ -260,8 +256,7 @@ namespace Collections.Extensions.SlotMaps
             if (returnKeys.Length < keys.Length)
             {
                 Checks.Warning(false
-                    , $"The length `{nameof(returnKeys)}` must be greater than "
-                    + $"or equal to the length of `{nameof(keys)}`."
+                    , $"{nameof(returnKeys)}.Length must be greater than or equal to {nameof(keys)}.Length."
                 );
 
                 returnValuesCount = 0;
@@ -271,8 +266,7 @@ namespace Collections.Extensions.SlotMaps
             if (returnValues.Length < keys.Length)
             {
                 Checks.Require(false
-                    , $"The length `{nameof(returnValues)}` must be greater than "
-                    + $"or equal to the length of `{nameof(keys)}`."
+                    , $"{nameof(returnValues)}.Length must be greater than or equal to {nameof(keys)}.Length."
                 );
 
                 returnValuesCount = 0;
@@ -323,7 +317,7 @@ namespace Collections.Extensions.SlotMaps
 
             if (TryGetNewKey(out var key, out var address) == false)
             {
-                Checks.Require(false, $"Cannot add `{value} ` to {s_name}.");
+                Checks.Require(false, $"Cannot add `{value}`.");
                 return default;
             }
 
@@ -340,8 +334,7 @@ namespace Collections.Extensions.SlotMaps
         {
             Checks.Require(
                   returnKeys.Length >= values.Length
-                , $"The length `{nameof(returnKeys)}` must be greater than "
-                + $"or equal to the length of `{nameof(values)}`."
+                , $"{nameof(returnKeys)}.Length must be greater than or equal to {nameof(values)}.Length."
             );
 
             _version++;
@@ -357,7 +350,7 @@ namespace Collections.Extensions.SlotMaps
 
                 if (TryGetNewKey(out var key, out var address) == false)
                 {
-                    Checks.Require(false, $"Cannot add `{value}` to {s_name} at index {i}.");
+                    Checks.Require(false, $"Cannot add `{value}` at index {i}.");
                     continue;
                 }
 
@@ -374,7 +367,7 @@ namespace Collections.Extensions.SlotMaps
 
             if (TryGetNewKey(out key, out var address) == false)
             {
-                Checks.Warning(false, $"Cannot add `{value}` to {s_name}.");
+                Checks.Warning(false, $"Cannot add `{value}`.");
                 return false;
             }
 
@@ -400,8 +393,7 @@ namespace Collections.Extensions.SlotMaps
             if (returnKeys.Length < values.Length)
             {
                 Checks.Warning(false
-                    , $"The length `{nameof(returnKeys)}` must be greater than "
-                    + $"or equal to the length of `{nameof(values)}`."
+                    , $"{nameof(returnKeys)}.Length must be greater than or equal to {nameof(values)}.Length."
                 );
 
                 returnKeyCount = 0;
@@ -421,7 +413,7 @@ namespace Collections.Extensions.SlotMaps
                 if (TryGetNewKey(out var key, out var address) == false)
                 {
                     Checks.Warning(false
-                        , $"Cannot add `{value}` to {s_name} at index {i}."
+                        , $"Cannot add `{value}` at index {i}."
                     );
                     continue;
                 }
@@ -449,7 +441,7 @@ namespace Collections.Extensions.SlotMaps
 
             if (Utils.FindPagedAddress(_pages.Length, _pageSize, key, out var address) == false)
             {
-                Checks.Require(false, $"Cannot replace `{value}` in {s_name}.");
+                Checks.Require(false, $"Cannot replace `{value}`.");
                 return default;
             }
 
@@ -698,8 +690,7 @@ namespace Collections.Extensions.SlotMaps
             if (newPageIndex >= _maxPageCount)
             {
                 Checks.Warning(false,
-                      $"Cannot add new page because it has reached "
-                    + $"the maximum limit of {_maxPageCount} pages."
+                      $"Cannot allocate more because it is limited {_maxPageCount} pages."
                 );
 
                 return false;

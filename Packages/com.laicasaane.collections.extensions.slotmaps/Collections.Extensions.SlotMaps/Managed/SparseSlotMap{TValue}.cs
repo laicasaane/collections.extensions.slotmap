@@ -65,10 +65,7 @@ namespace Collections.Extensions.SlotMaps
 
             Checks.Warning(
                   _freeIndicesLimit <= _pageSize
-                , $"`{nameof(freeIndicesLimit)}` should be lesser than "
-                + $"or equal to `{nameof(pageSize)}: {_pageSize}`, "
-                + $"or it would be clamped to `{nameof(_pageSize)}`. "
-                + $"Value: {_freeIndicesLimit}."
+                , $"`{nameof(freeIndicesLimit)}` should be lesser than or equal to {_pageSize}."
             );
 
             _maxPageCount = Utils.GetMaxPageCount(_pageSize);
