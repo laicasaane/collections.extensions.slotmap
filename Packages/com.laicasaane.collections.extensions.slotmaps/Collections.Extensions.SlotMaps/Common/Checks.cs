@@ -10,7 +10,6 @@
 #endif
 #endif
 
-using System;
 using System.Diagnostics;
 
 #if __USE_UNITY_LOGGING__
@@ -36,11 +35,7 @@ namespace Collections.Extensions.SlotMaps
         {
             if (assertion == false)
             {
-#if __USE_UNITY_LOGGING__
-                throw new SlotMapException(message.ToString());
-#else
                 throw new SlotMapException(message);
-#endif
             }
         }
 
@@ -60,11 +55,7 @@ namespace Collections.Extensions.SlotMaps
         {
             if (assertion == false)
             {
-#if __USE_UNITY_LOGGING__
-                throw new SlotMapException(message.ToString(), inner);
-#else
                 throw new SlotMapException(message, inner);
-#endif
             }
         }
 
@@ -114,11 +105,7 @@ namespace Collections.Extensions.SlotMaps
             {
                 if (required)
                 {
-#if __USE_UNITY_LOGGING__
-                    throw new SlotMapException(message.ToString());
-#else
                     throw new SlotMapException(message);
-#endif
                 }
                 else
                 {
@@ -155,11 +142,7 @@ namespace Collections.Extensions.SlotMaps
             {
                 if (required)
                 {
-#if __USE_UNITY_LOGGING__
-                    throw new SlotMapException(message.ToString(), inner);
-#else
                     throw new SlotMapException(message, inner);
-#endif
                 }
                 else
                 {
@@ -174,21 +157,6 @@ namespace Collections.Extensions.SlotMaps
             if (assertion == false)
                 System.Diagnostics.Debug.WriteLine(message);
 #endif
-        }
-    }
-
-    public class SlotMapException : Exception
-    {
-        public SlotMapException()
-        {
-        }
-
-        public SlotMapException(string message) : base(message)
-        {
-        }
-
-        public SlotMapException(string message, System.Exception inner) : base(message, inner)
-        {
         }
     }
 }
