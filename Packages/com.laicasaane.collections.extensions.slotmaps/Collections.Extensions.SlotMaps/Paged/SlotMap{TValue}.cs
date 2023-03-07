@@ -5,6 +5,19 @@ using System.Runtime.CompilerServices;
 
 namespace Collections.Extensions.SlotMaps
 {
+    /// <summary>
+    /// A Slot Map is a high-performance associative container
+    /// with persistent unique keys to access stored values.
+    /// <br/>
+    /// Upon insertion, a key is returned that can be used to later access or remove the values.
+    /// <br/>
+    /// Insertion, removal, and access are all guaranteed to take <c>O(1)</c> time (best, worst, and average case).
+    /// <br/>
+    /// Great for storing collections of objects that need stable, safe references but have no clear ownership.
+    /// </summary>
+    /// <remarks>
+    /// <typeparamref name="TValue"/> are stored in pages to optimize the memory allocation.
+    /// </remarks>
     public partial class SlotMap<TValue> : IPagedSlotMap<TValue>
     {
         private static readonly string s_name = $"{nameof(SlotMap<TValue>)}<{typeof(TValue).Name}>";

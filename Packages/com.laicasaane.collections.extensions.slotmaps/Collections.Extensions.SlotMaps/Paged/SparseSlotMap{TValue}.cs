@@ -5,6 +5,22 @@ using System.Runtime.CompilerServices;
 
 namespace Collections.Extensions.SlotMaps
 {
+    /// <summary>
+    /// A Sparse Slot Map is a high-performance associative container
+    /// with persistent unique keys to access stored values.
+    /// <br/>
+    /// Upon insertion, a key is returned that can be used to later access or remove the values.
+    /// <br/>
+    /// Insertion, removal, and access are all guaranteed to take <c>O(1)</c> time (best, worst, and average case).
+    /// <br/>
+    /// Great for storing collections of objects that need stable, safe references but have no clear ownership.
+    /// </summary>
+    /// <remarks>
+    /// The public APIs of <see cref="SparseSlotMap{TValue}"/> are similar to
+    /// <see cref="SlotMap{TValue}"/>, however its internal implementation is based on Sparse Set.
+    /// <br/>
+    /// <typeparamref name="TValue"/> are stored in pages to optimize the memory allocation.
+    /// </remarks>
     public partial class SparseSlotMap<TValue> : IPagedSlotMap<TValue>
     {
         private static readonly string s_name = $"{nameof(SparseSlotMap<TValue>)}<{typeof(TValue).Name}>";
