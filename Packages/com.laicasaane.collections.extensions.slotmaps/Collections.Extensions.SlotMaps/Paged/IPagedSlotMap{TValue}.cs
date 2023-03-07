@@ -9,6 +9,5 @@
 
     public interface IPagedSlotMap<TValue> : IReadOnlyPagedSlotMap<TValue>, ISlotMap<TValue>
     {
-
     }
 }

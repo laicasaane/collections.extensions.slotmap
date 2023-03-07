@@ -28,13 +28,13 @@ namespace Collections.Extensions.SlotMaps
             public ReadOnlyMemory<SlotMeta> Metas
             {
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
-                get => _metas;
+                get => new ReadOnlyMemory<SlotMeta>(_metas, 0, (int)_count);
             }
 
             public ReadOnlyMemory<uint> DenseIndices
             {
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
-                get => _denseIndices;
+                get => new ReadOnlyMemory<uint>(_denseIndices, 0, (int)_count);
             }
 
             internal SlotKey UpdateVersion(uint index, SlotKey key)

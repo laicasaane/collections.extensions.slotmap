@@ -28,13 +28,13 @@ namespace Collections.Extensions.SlotMaps
             public ReadOnlyMemory<uint> SparseIndices
             {
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
-                get => _sparseIndices;
+                get => new ReadOnlyMemory<uint>(_sparseIndices, 0, (int)_count);
             }
 
             public ReadOnlyMemory<TValue> Values
             {
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
-                get => _values;
+                get => new ReadOnlyMemory<TValue>(_values, 0, (int)_count);
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
