@@ -19,7 +19,13 @@ namespace Collections.Extensions.SlotMaps
                 _count = 0;
             }
 
-            public uint Count
+            /// <summary>
+            /// To determine whether the last page is full.
+            /// </summary>
+            /// <remarks>
+            /// Does NOT equal to the length of internal arrays.
+            /// </remarks>
+            internal uint Count
             {
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
                 get => _count;
@@ -28,13 +34,13 @@ namespace Collections.Extensions.SlotMaps
             public ReadOnlyMemory<SlotMeta> Metas
             {
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
-                get => new ReadOnlyMemory<SlotMeta>(_metas, 0, (int)_count);
+                get => _metas;
             }
 
             public ReadOnlyMemory<TValue> Values
             {
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
-                get => new ReadOnlyMemory<TValue>(_values, 0, (int)_count);
+                get => _values;
             }
 
             internal SlotKey UpdateVersion(uint index, SlotKey key)
@@ -381,7 +387,7 @@ namespace Collections.Extensions.SlotMaps
                 if (currentVersion != key.Version)
                 {
                     Checks.Warning(false
-                        , $"Cannot remove value because the  `key.Version` "
+                        , $"Cannot remove value because the `key.Version` "
                         + $"is different from the current version. "
                         + $"key.Version: {key.Version}. Current version: {currentVersion}."
                     );
