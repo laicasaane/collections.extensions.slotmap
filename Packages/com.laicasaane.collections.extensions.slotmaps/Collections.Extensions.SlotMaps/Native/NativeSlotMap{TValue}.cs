@@ -229,10 +229,7 @@ namespace Collections.Extensions.SlotMaps
 
             for (var i = 0; i < length; i++)
             {
-                ref readonly var key = ref keys[i];
-
-                CheckRequiredKeyAndMeta(key);
-                returnValues[i] = _values[(int)key.Index];
+                returnValues[i] = Get(keys[i]);
             }
         }
 
@@ -788,12 +785,13 @@ namespace Collections.Extensions.SlotMaps
 
             if (nextIndex >= length)
             {
-                var newLength = length + _allocationSize;
+                var allocator = _allocator;
+                var allocSize = _allocationSize;
+                var newLength = length + allocSize;
 
                 if (newLength > _maxSlotCount)
                 {
-                    NativeChecks.Warning(
-                          false
+                    NativeChecks.Warning(false
                         , $"Cannot allocate more because it is limited to {_maxSlotCount} slots."
                     );
 
@@ -801,8 +799,8 @@ namespace Collections.Extensions.SlotMaps
                     return false;
                 }
 
-                _metas.Grow(_allocationSize, _allocator);
-                _values.Grow(_allocationSize, _allocator, NativeArrayOptions.UninitializedMemory);
+                _metas.Grow(allocSize, allocator);
+                _values.Grow(allocSize, allocator, NativeArrayOptions.UninitializedMemory);
             }
 
             key = new SlotKey((uint)nextIndex);
