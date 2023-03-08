@@ -31,11 +31,11 @@ namespace Collections.Extensions.SlotMaps
 
         private readonly Queue<SlotKey> _freeKeys = new();
 
-        private SparsePage[] _sparsePages = Array.Empty<SparsePage>();
-        private DensePage[] _densePages = Array.Empty<DensePage>();
+        private MetaPage[] _metaPages = Array.Empty<MetaPage>();
+        private ValuePage[] _valuePages = Array.Empty<ValuePage>();
         private uint _slotCount;
         private uint _tombstoneCount;
-        private long _lastDenseIndex;
+        private long _lastValueIndex;
         private int _version;
 
         /// <summary></summary>
@@ -70,7 +70,7 @@ namespace Collections.Extensions.SlotMaps
             _maxPageCount = Utils.GetMaxPageCount(_pageSize);
             _slotCount = 0;
             _tombstoneCount = 0;
-            _lastDenseIndex = -1;
+            _lastValueIndex = -1;
             _version = 0;
 
             TryAddPage();
@@ -117,7 +117,7 @@ namespace Collections.Extensions.SlotMaps
         public int PageCount
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get => _sparsePages.Length;
+            get => _metaPages.Length;
         }
 
         /// <summary>
@@ -138,16 +138,16 @@ namespace Collections.Extensions.SlotMaps
             get => _tombstoneCount;
         }
 
-        public ReadOnlyMemory<SparsePage> SparsePages
+        public ReadOnlyMemory<MetaPage> MetaPages
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get => _sparsePages;
+            get => _metaPages;
         }
 
-        public ReadOnlyMemory<DensePage> DensePages
+        public ReadOnlyMemory<ValuePage> ValuePages
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get => _densePages;
+            get => _valuePages;
         }
 
         public TValue Get(in SlotKey key)
@@ -155,17 +155,17 @@ namespace Collections.Extensions.SlotMaps
             Checks.Require(key.IsValid, $"Key {key} is invalid.");
 
             var pageSize = _pageSize;
-            var sparsePages = _sparsePages;
+            var metaPages = _metaPages;
 
-            if (Utils.FindPagedAddress(sparsePages.Length, pageSize, key, out var sparseAddress) == false)
+            if (Utils.FindPagedAddress(metaPages.Length, pageSize, key, out var metaAddress) == false)
             {
                 throw new SlotMapException($"Cannot find address for {key}");
             }
 
-            ref var sparsePage = ref sparsePages[sparseAddress.PageIndex];
-            var denseIndex = sparsePage.GetDenseIndex(sparseAddress.SlotIndex, key);
-            var denseAddress = PagedAddress.FromIndex(denseIndex, pageSize);
-            return _densePages[denseAddress.PageIndex].GetRef(denseAddress.SlotIndex);
+            ref var metaPage = ref metaPages[metaAddress.PageIndex];
+            var valueIndex = metaPage.GetValueIndex(metaAddress.SlotIndex, key);
+            var valueAddress = PagedAddress.FromIndex(valueIndex, pageSize);
+            return _valuePages[valueAddress.PageIndex].GetRef(valueAddress.SlotIndex);
         }
 
         public void GetRange(
@@ -178,9 +178,9 @@ namespace Collections.Extensions.SlotMaps
                 , $"{nameof(returnValues)}.Length must be greater than or equal to {nameof(keys)}.Length."
             );
 
-            var sparsePages = _sparsePages;
-            var densePages = _densePages;
-            var pageLength = sparsePages.Length;
+            var metaPages = _metaPages;
+            var valuePages = _valuePages;
+            var pageLength = metaPages.Length;
             var pageSize = _pageSize;
             var length = keys.Length;
 
@@ -190,16 +190,16 @@ namespace Collections.Extensions.SlotMaps
 
                 Checks.Require(key.IsValid, $"Key {key} is invalid.");
 
-                if (Utils.FindPagedAddress(pageLength, pageSize, key, out var sparseAddress) == false)
+                if (Utils.FindPagedAddress(pageLength, pageSize, key, out var metaAddress) == false)
                 {
                     Checks.Require(false, $"Cannot find address for {key}.");
                     continue;
                 }
 
-                ref var sparsePage = ref sparsePages[sparseAddress.PageIndex];
-                var denseIndex = sparsePage.GetDenseIndex(sparseAddress.SlotIndex, key);
-                var denseAddress = PagedAddress.FromIndex(denseIndex, pageSize);
-                returnValues[i] = densePages[denseAddress.PageIndex].GetRef(denseAddress.SlotIndex);
+                ref var metaPage = ref metaPages[metaAddress.PageIndex];
+                var valueIndex = metaPage.GetValueIndex(metaAddress.SlotIndex, key);
+                var valueAddress = PagedAddress.FromIndex(valueIndex, pageSize);
+                returnValues[i] = valuePages[valueAddress.PageIndex].GetRef(valueAddress.SlotIndex);
             }
         }
 
@@ -208,18 +208,18 @@ namespace Collections.Extensions.SlotMaps
             Checks.Require(key.IsValid, $"Key {key} is invalid.");
 
             var pageSize = _pageSize;
-            var sparsePages = _sparsePages;
+            var metaPages = _metaPages;
 
-            if (Utils.FindPagedAddress(sparsePages.Length, pageSize, key, out var sparseAddress) == false)
+            if (Utils.FindPagedAddress(metaPages.Length, pageSize, key, out var metaAddress) == false)
             {
                 Checks.Require(false, $"Cannot find address for {key}.");
                 return ref Unsafe.NullRef<TValue>();
             }
 
-            ref var sparsePage = ref sparsePages[sparseAddress.PageIndex];
-            var denseIndex = sparsePage.GetDenseIndex(sparseAddress.SlotIndex, key);
-            var denseAddress = PagedAddress.FromIndex(denseIndex, pageSize);
-            return ref _densePages[denseAddress.PageIndex].GetRef(denseAddress.SlotIndex);
+            ref var metaPage = ref metaPages[metaAddress.PageIndex];
+            var valueIndex = metaPage.GetValueIndex(metaAddress.SlotIndex, key);
+            var valueAddress = PagedAddress.FromIndex(valueIndex, pageSize);
+            return ref _valuePages[valueAddress.PageIndex].GetRef(valueAddress.SlotIndex);
         }
 
         public ref readonly TValue GetRefNotThrow(in SlotKey key)
@@ -231,23 +231,23 @@ namespace Collections.Extensions.SlotMaps
             }
 
             var pageSize = _pageSize;
-            var sparsePages = _sparsePages;
+            var metaPages = _metaPages;
 
-            if (Utils.FindPagedAddress(sparsePages.Length, pageSize, key, out var sparseAddress) == false)
+            if (Utils.FindPagedAddress(metaPages.Length, pageSize, key, out var metaAddress) == false)
             {
                 Checks.Warning(false, $"Cannot find address for {key}.");
                 return ref Unsafe.NullRef<TValue>();
             }
 
-            ref var sparsePage = ref sparsePages[sparseAddress.PageIndex];
+            ref var metaPage = ref metaPages[metaAddress.PageIndex];
 
-            if (sparsePage.TryGetDenseIndex(sparseAddress.SlotIndex, key, out var denseIndex) == false)
+            if (metaPage.TryGetValueIndex(metaAddress.SlotIndex, key, out var valueIndex) == false)
             {
                 return ref Unsafe.NullRef<TValue>();
             }
 
-            var denseAddress = PagedAddress.FromIndex(denseIndex, pageSize);
-            return ref _densePages[denseAddress.PageIndex].GetRef(denseAddress.SlotIndex);
+            var valueAddress = PagedAddress.FromIndex(valueIndex, pageSize);
+            return ref _valuePages[valueAddress.PageIndex].GetRef(valueAddress.SlotIndex);
         }
 
         public bool TryGet(in SlotKey key, out TValue value)
@@ -260,25 +260,25 @@ namespace Collections.Extensions.SlotMaps
             }
 
             var pageSize = _pageSize;
-            var sparsePages = _sparsePages;
+            var metaPages = _metaPages;
 
-            if (Utils.FindPagedAddress(sparsePages.Length, pageSize, key, out var sparseAddress) == false)
+            if (Utils.FindPagedAddress(metaPages.Length, pageSize, key, out var metaAddress) == false)
             {
                 Checks.Warning(false, $"Cannot find address for {key} .");
                 value = default;
                 return false;
             }
 
-            ref var sparsePage = ref sparsePages[sparseAddress.PageIndex];
+            ref var metaPage = ref metaPages[metaAddress.PageIndex];
 
-            if (sparsePage.TryGetDenseIndex(sparseAddress.SlotIndex, key, out var denseIndex) == false)
+            if (metaPage.TryGetValueIndex(metaAddress.SlotIndex, key, out var valueIndex) == false)
             {
                 value = default;
                 return false;
             }
 
-            var denseAddress = PagedAddress.FromIndex(denseIndex, pageSize);
-            value = _densePages[denseAddress.PageIndex].GetRef(denseAddress.SlotIndex);
+            var valueAddress = PagedAddress.FromIndex(valueIndex, pageSize);
+            value = _valuePages[valueAddress.PageIndex].GetRef(valueAddress.SlotIndex);
             return true;
         }
 
@@ -309,9 +309,9 @@ namespace Collections.Extensions.SlotMaps
                 return false;
             }
 
-            var sparsePages = _sparsePages;
-            var densePages = _densePages;
-            var pageLength = sparsePages.Length;
+            var metaPages = _metaPages;
+            var valuePages = _valuePages;
+            var pageLength = metaPages.Length;
             var pageSize = _pageSize;
             var length = keys.Length;
             var returnIndex = 0;
@@ -326,23 +326,23 @@ namespace Collections.Extensions.SlotMaps
                     continue;
                 }
 
-                if (Utils.FindPagedAddress(pageLength, pageSize, key, out var sparseAddress) == false)
+                if (Utils.FindPagedAddress(pageLength, pageSize, key, out var metaAddress) == false)
                 {
                     Checks.Warning(false, $"Cannot find address for {key} .");
                     continue;
                 }
 
-                ref var sparsePage = ref sparsePages[sparseAddress.PageIndex];
+                ref var metaPage = ref metaPages[metaAddress.PageIndex];
 
-                if (sparsePage.TryGetDenseIndex(sparseAddress.SlotIndex, key, out var denseIndex) == false)
+                if (metaPage.TryGetValueIndex(metaAddress.SlotIndex, key, out var valueIndex) == false)
                 {
                     continue;
                 }
 
-                var denseAddress = PagedAddress.FromIndex(denseIndex, pageSize);
+                var valueAddress = PagedAddress.FromIndex(valueIndex, pageSize);
 
                 returnKeys[returnIndex] = key;
-                returnValues[returnIndex] = densePages[denseAddress.PageIndex].GetRef(denseAddress.SlotIndex);
+                returnValues[returnIndex] = valuePages[valueAddress.PageIndex].GetRef(valueAddress.SlotIndex);
 
                 returnIndex++;
             }
@@ -355,18 +355,18 @@ namespace Collections.Extensions.SlotMaps
         {
             _version++;
 
-            var resultGetNewKey = TryGetNewKey(out var key, out var sparseAddress, out var denseIndex);
+            var resultGetNewKey = TryGetNewKey(out var key, out var metaAddress, out var valueIndex);
             Checks.Require(resultGetNewKey, $"Cannot add {value}.");
 
-            ref var sparsePage = ref _sparsePages[sparseAddress.PageIndex];
-            sparsePage.Add(sparseAddress.SlotIndex, key, denseIndex);
+            ref var metaPage = ref _metaPages[metaAddress.PageIndex];
+            metaPage.Add(metaAddress.SlotIndex, key, valueIndex);
 
             var pageSize = _pageSize;
-            var denseAddress = PagedAddress.FromIndex(denseIndex, pageSize);
-            ref var densePage = ref _densePages[denseAddress.PageIndex];
-            densePage.Add(denseAddress.SlotIndex, sparseAddress.ToIndex(pageSize), value);
+            var valueAddress = PagedAddress.FromIndex(valueIndex, pageSize);
+            ref var valuePage = ref _valuePages[valueAddress.PageIndex];
+            valuePage.Add(valueAddress.SlotIndex, metaAddress.ToIndex(pageSize), value);
 
-            _lastDenseIndex++;
+            _lastValueIndex++;
             _slotCount++;
             return key;
         }
@@ -383,30 +383,30 @@ namespace Collections.Extensions.SlotMaps
                 , $"{nameof(returnKeys)}.Length must be greater than or equal to {nameof(values)}.Length."
             );
 
-            var sparsePages = _sparsePages;
-            var densePages = _densePages;
+            var metaPages = _metaPages;
+            var valuePages = _valuePages;
             var pageSize = _pageSize;
             var length = values.Length;
 
             ref var slotCount = ref _slotCount;
-            ref var lastDenseIndex = ref _lastDenseIndex;
+            ref var lastValueIndex = ref _lastValueIndex;
 
             for (var i = 0; i < length; i++)
             {
                 ref readonly var value = ref values[i];
 
-                var resultGetNewKey = TryGetNewKey(out var key, out var sparseAddress, out var denseIndex);
+                var resultGetNewKey = TryGetNewKey(out var key, out var metaAddress, out var valueIndex);
                 Checks.Require(resultGetNewKey, $"Cannot add {value}.");
 
-                ref var sparsePage = ref sparsePages[sparseAddress.PageIndex];
-                sparsePage.Add(sparseAddress.SlotIndex, key, denseIndex);
+                ref var metaPage = ref metaPages[metaAddress.PageIndex];
+                metaPage.Add(metaAddress.SlotIndex, key, valueIndex);
 
-                var denseAddress = PagedAddress.FromIndex(denseIndex, pageSize);
-                ref var densePage = ref densePages[denseAddress.PageIndex];
-                densePage.Add(denseAddress.SlotIndex, sparseAddress.ToIndex(pageSize), value);
+                var valueAddress = PagedAddress.FromIndex(valueIndex, pageSize);
+                ref var valuePage = ref valuePages[valueAddress.PageIndex];
+                valuePage.Add(valueAddress.SlotIndex, metaAddress.ToIndex(pageSize), value);
 
                 slotCount++;
-                lastDenseIndex++;
+                lastValueIndex++;
                 returnKeys[i] = key;
             }
         }
@@ -415,19 +415,19 @@ namespace Collections.Extensions.SlotMaps
         {
             _version++;
 
-            if (TryGetNewKey(out key, out var sparseAddress, out var denseIndex) == false)
+            if (TryGetNewKey(out key, out var metaAddress, out var valueIndex) == false)
             {
                 Checks.Warning(false, $"Cannot add {value}.");
                 return false;
             }
 
-            ref var sparsePage = ref _sparsePages[sparseAddress.PageIndex];
+            ref var metaPage = ref _metaPages[metaAddress.PageIndex];
 
             var pageSize = _pageSize;
-            var denseAddress = PagedAddress.FromIndex(denseIndex, _pageSize);
-            ref var densePage = ref _densePages[denseAddress.PageIndex];
+            var valueAddress = PagedAddress.FromIndex(valueIndex, _pageSize);
+            ref var valuePage = ref _valuePages[valueAddress.PageIndex];
 
-            if (sparsePage.TryAdd(sparseAddress.SlotIndex, key, denseIndex) == false)
+            if (metaPage.TryAdd(metaAddress.SlotIndex, key, valueIndex) == false)
             {
                 return false;
             }
@@ -436,10 +436,10 @@ namespace Collections.Extensions.SlotMaps
             try
 #endif
             {
-                densePage.Add(denseAddress.SlotIndex, sparseAddress.ToIndex(pageSize), value);
+                valuePage.Add(valueAddress.SlotIndex, metaAddress.ToIndex(pageSize), value);
 
                 _slotCount++;
-                _lastDenseIndex++;
+                _lastValueIndex++;
                 return true;
             }
 #if !DISABLE_SLOTMAP_CHECKS
@@ -469,31 +469,31 @@ namespace Collections.Extensions.SlotMaps
                 return false;
             }
 
-            var sparsePages = _sparsePages;
-            var densePages = _densePages;
+            var metaPages = _metaPages;
+            var valuePages = _valuePages;
             var pageSize = _pageSize;
             var length = values.Length;
             var resultIndex = 0;
 
             ref var slotCount = ref _slotCount;
-            ref var lastDenseIndex = ref _lastDenseIndex;
+            ref var lastValueIndex = ref _lastValueIndex;
 
             for (var i = 0; i < length; i++)
             {
                 ref readonly var value = ref values[i];
 
-                if (TryGetNewKey(out var key, out var sparseAddress, out var denseIndex) == false)
+                if (TryGetNewKey(out var key, out var metaAddress, out var valueIndex) == false)
                 {
                     Checks.Warning(false, $"Cannot add {value}.");
                     continue;
                 }
 
-                ref var sparsePage = ref sparsePages[sparseAddress.PageIndex];
+                ref var metaPage = ref metaPages[metaAddress.PageIndex];
 
-                var denseAddress = PagedAddress.FromIndex(denseIndex, pageSize);
-                ref var densePage = ref densePages[denseAddress.PageIndex];
+                var valueAddress = PagedAddress.FromIndex(valueIndex, pageSize);
+                ref var valuePage = ref valuePages[valueAddress.PageIndex];
 
-                if (sparsePage.TryAdd(sparseAddress.SlotIndex, key, denseIndex) == false)
+                if (metaPage.TryAdd(metaAddress.SlotIndex, key, valueIndex) == false)
                 {
                     continue;
                 }
@@ -502,9 +502,9 @@ namespace Collections.Extensions.SlotMaps
                 try
 #endif
                 {
-                    densePage.Add(denseAddress.SlotIndex, sparseAddress.ToIndex(pageSize), value);
+                    valuePage.Add(valueAddress.SlotIndex, metaAddress.ToIndex(pageSize), value);
 
-                    lastDenseIndex++;
+                    lastValueIndex++;
                     slotCount++;
 
                     returnKeys[resultIndex] = key;
@@ -529,24 +529,24 @@ namespace Collections.Extensions.SlotMaps
 
             Checks.Require(key.IsValid, $"Key {key} is invalid.");
 
-            var sparsePages = _sparsePages;
+            var metaPages = _metaPages;
             var pageSize = _pageSize;
-            var pageLength = sparsePages.Length;
+            var pageLength = metaPages.Length;
 
-            if (Utils.FindPagedAddress(pageLength, pageSize, key, out var sparseAddress) == false)
+            if (Utils.FindPagedAddress(pageLength, pageSize, key, out var metaAddress) == false)
             {
                 Checks.Require(false, $"Cannot replace {value}.");
                 return default;
             }
 
-            ref var sparsePage = ref sparsePages[sparseAddress.PageIndex];
-            var denseIndex = sparsePage.GetDenseIndex(sparseAddress.SlotIndex, key);
+            ref var metaPage = ref metaPages[metaAddress.PageIndex];
+            var valueIndex = metaPage.GetValueIndex(metaAddress.SlotIndex, key);
 
-            var newKey = sparsePage.Replace(sparseAddress.SlotIndex, key, denseIndex);
-            var denseAddress = PagedAddress.FromIndex(denseIndex, pageSize);
+            var newKey = metaPage.Replace(metaAddress.SlotIndex, key, valueIndex);
+            var valueAddress = PagedAddress.FromIndex(valueIndex, pageSize);
 
-            ref var densePage = ref _densePages[denseAddress.PageIndex];
-            densePage.Replace(denseAddress.SlotIndex, sparseAddress.ToIndex(pageSize), value);
+            ref var valuePage = ref _valuePages[valueAddress.PageIndex];
+            valuePage.Replace(valueAddress.SlotIndex, metaAddress.ToIndex(pageSize), value);
 
             return newKey;
         }
@@ -562,25 +562,25 @@ namespace Collections.Extensions.SlotMaps
                 return false;
             }
 
-            var sparsePages = _sparsePages;
+            var metaPages = _metaPages;
             var pageSize = _pageSize;
-            var pageLength = sparsePages.Length;
+            var pageLength = metaPages.Length;
 
-            if (Utils.FindPagedAddress(pageLength, pageSize, key, out var sparseAddress) == false)
+            if (Utils.FindPagedAddress(pageLength, pageSize, key, out var metaAddress) == false)
             {
                 newKey = key;
                 return false;
             }
 
-            ref var sparsePage = ref sparsePages[sparseAddress.PageIndex];
+            ref var metaPage = ref metaPages[metaAddress.PageIndex];
             
-            if (sparsePage.TryGetDenseIndex(sparseAddress.SlotIndex, key, out var denseIndex) == false)
+            if (metaPage.TryGetValueIndex(metaAddress.SlotIndex, key, out var valueIndex) == false)
             {
                 newKey = key;
                 return false;
             }
 
-            if (sparsePage.TryReplace(sparseAddress.SlotIndex, key, denseIndex, out newKey) == false)
+            if (metaPage.TryReplace(metaAddress.SlotIndex, key, valueIndex, out newKey) == false)
             {
                 return false;
             }
@@ -589,9 +589,9 @@ namespace Collections.Extensions.SlotMaps
             try
 #endif
             {
-                var denseAddress = PagedAddress.FromIndex(denseIndex, pageSize);
-                ref var densePage = ref _densePages[denseAddress.PageIndex];
-                densePage.Replace(denseAddress.SlotIndex, sparseAddress.ToIndex(pageSize), value);
+                var valueAddress = PagedAddress.FromIndex(valueIndex, pageSize);
+                ref var valuePage = ref _valuePages[valueAddress.PageIndex];
+                valuePage.Replace(valueAddress.SlotIndex, metaAddress.ToIndex(pageSize), value);
                 return true;
             }
 #if !DISABLE_SLOTMAP_CHECKS
@@ -613,18 +613,18 @@ namespace Collections.Extensions.SlotMaps
                 return false;
             }
 
-            var sparsePages = _sparsePages;
-            var pageLength = sparsePages.Length;
+            var metaPages = _metaPages;
+            var pageLength = metaPages.Length;
             var pageSize = _pageSize;
 
-            if (Utils.FindPagedAddress(pageLength, pageSize, key, out var sparseAddressToRemove) == false)
+            if (Utils.FindPagedAddress(pageLength, pageSize, key, out var metaAddressToRemove) == false)
             {
                 return false;
             }
 
-            ref var sparsePage = ref sparsePages[sparseAddressToRemove.PageIndex];
+            ref var metaPage = ref metaPages[metaAddressToRemove.PageIndex];
 
-            if (sparsePage.Remove(sparseAddressToRemove.SlotIndex, key, out var denseIndexToRemove) == false)
+            if (metaPage.Remove(metaAddressToRemove.SlotIndex, key, out var valueIndexToRemove) == false)
             {
                 return false;
             }
@@ -633,27 +633,27 @@ namespace Collections.Extensions.SlotMaps
             try
 #endif
             {
-                // Swap last slot pointed by _lastDenseIndex
-                // to the slot pointed by denseIndexToRemove
+                // Swap last slot pointed by _lastValueIndex
+                // to the slot pointed by valueIndexToRemove
 
-                var indexDest = denseIndexToRemove;
-                var indexSrc = _lastDenseIndex;
-                var densePages = _densePages;
+                var indexDest = valueIndexToRemove;
+                var indexSrc = _lastValueIndex;
+                var valuePages = _valuePages;
 
                 var addressDest = PagedAddress.FromIndex(indexDest, pageSize);
                 var addressSrc = PagedAddress.FromIndex(indexSrc, pageSize);
 
-                ref var pageDest = ref densePages[addressDest.PageIndex];
-                ref var pageSrc = ref densePages[addressSrc.PageIndex];
+                ref var pageDest = ref valuePages[addressDest.PageIndex];
+                ref var pageSrc = ref valuePages[addressSrc.PageIndex];
 
-                pageSrc.Remove(addressSrc.SlotIndex, out var sparseIndexToReplace, out var value);
-                pageDest.Replace(addressDest.SlotIndex, sparseIndexToReplace, value);
+                pageSrc.Remove(addressSrc.SlotIndex, out var metaIndexToReplace, out var value);
+                pageDest.Replace(addressDest.SlotIndex, metaIndexToReplace, value);
 
-                var sparseAddressToReplace = PagedAddress.FromIndex(sparseIndexToReplace, pageSize);
-                ref var sparsePageToReplace = ref sparsePages[sparseAddressToReplace.PageIndex];
-                sparsePageToReplace.ReplaceDenseIndexUnsafe(sparseAddressToReplace.SlotIndex, indexDest);
+                var metaAddressToReplace = PagedAddress.FromIndex(metaIndexToReplace, pageSize);
+                ref var metaPageToReplace = ref metaPages[metaAddressToReplace.PageIndex];
+                metaPageToReplace.ReplaceValueIndexUnsafe(metaAddressToReplace.SlotIndex, indexDest);
 
-                _lastDenseIndex--;
+                _lastValueIndex--;
                 _slotCount--;
 
                 if (key.Version < SlotVersion.MaxValue)
@@ -680,16 +680,16 @@ namespace Collections.Extensions.SlotMaps
         {
             _version++;
 
-            var sparsePages = _sparsePages;
-            var densePages = _densePages;
-            var pageLength = sparsePages.Length;
+            var metaPages = _metaPages;
+            var valuePages = _valuePages;
+            var pageLength = metaPages.Length;
             var pageSize = _pageSize;
             var freeKeys = _freeKeys;
             var length = keys.Length;
 
             ref var slotCount = ref _slotCount;
             ref var tombstoneCount = ref _tombstoneCount;
-            ref var lastDenseIndex = ref _lastDenseIndex;
+            ref var lastValueIndex = ref _lastValueIndex;
 
             for (var i = 0; i < length; i++)
             {
@@ -701,38 +701,38 @@ namespace Collections.Extensions.SlotMaps
                     continue;
                 }
 
-                if (Utils.FindPagedAddress(pageLength, pageSize, key, out var sparseAddress) == false)
+                if (Utils.FindPagedAddress(pageLength, pageSize, key, out var metaAddress) == false)
                 {
                     continue;
                 }
 
-                ref var sparsePage = ref sparsePages[sparseAddress.PageIndex];
+                ref var metaPage = ref metaPages[metaAddress.PageIndex];
 
-                if (sparsePage.Remove(sparseAddress.SlotIndex, key, out var denseIndexToRemove) == false)
+                if (metaPage.Remove(metaAddress.SlotIndex, key, out var valueIndexToRemove) == false)
                 {
                     continue;
                 }
 
-                // Swap last slot pointed by _lastDenseIndex
-                // to the slot pointed by denseIndexToRemove
+                // Swap last slot pointed by _lastValueIndex
+                // to the slot pointed by valueIndexToRemove
 
-                var indexDest = denseIndexToRemove;
-                var indexSrc = lastDenseIndex;
+                var indexDest = valueIndexToRemove;
+                var indexSrc = lastValueIndex;
 
                 var addressDest = PagedAddress.FromIndex(indexDest, pageSize);
                 var addressSrc = PagedAddress.FromIndex(indexSrc, pageSize);
 
-                ref var pageDest = ref densePages[addressDest.PageIndex];
-                ref var pageSrc = ref densePages[addressSrc.PageIndex];
+                ref var pageDest = ref valuePages[addressDest.PageIndex];
+                ref var pageSrc = ref valuePages[addressSrc.PageIndex];
 
-                pageSrc.Remove(addressSrc.SlotIndex, out var sparseIndexToReplace, out var value);
-                pageDest.Replace(addressDest.SlotIndex, sparseAddress.ToIndex(pageSize), value);
+                pageSrc.Remove(addressSrc.SlotIndex, out var metaIndexToReplace, out var value);
+                pageDest.Replace(addressDest.SlotIndex, metaAddress.ToIndex(pageSize), value);
 
-                var sparseAddressToReplace = PagedAddress.FromIndex(sparseIndexToReplace, pageSize);
-                ref var sparsePageToReplace = ref sparsePages[sparseAddressToReplace.PageIndex];
-                sparsePageToReplace.ReplaceDenseIndexUnsafe(sparseAddressToReplace.SlotIndex, addressDest.SlotIndex);
+                var metaAddressToReplace = PagedAddress.FromIndex(metaIndexToReplace, pageSize);
+                ref var metaPageToReplace = ref metaPages[metaAddressToReplace.PageIndex];
+                metaPageToReplace.ReplaceValueIndexUnsafe(metaAddressToReplace.SlotIndex, addressDest.SlotIndex);
 
-                lastDenseIndex--;
+                lastValueIndex--;
                 slotCount--;
 
                 if (key.Version < SlotVersion.MaxValue)
@@ -754,27 +754,27 @@ namespace Collections.Extensions.SlotMaps
                 return false;
             }
 
-            if (Utils.FindPagedAddress(_sparsePages.Length, _pageSize, key, out var address) == false)
+            if (Utils.FindPagedAddress(_metaPages.Length, _pageSize, key, out var address) == false)
             {
                 return false;
             }
 
-            ref var sparsePage = ref _sparsePages[address.PageIndex];
-            return sparsePage.Contains(address.SlotIndex, key);
+            ref var metaPage = ref _metaPages[address.PageIndex];
+            return metaPage.Contains(address.SlotIndex, key);
         }
 
         public SlotKey UpdateVersion(in SlotKey key)
         {
             Checks.Require(key.IsValid, $"Key {key} is invalid.");
 
-            if (Utils.FindPagedAddress(_sparsePages.Length, _pageSize, key, out var address) == false)
+            if (Utils.FindPagedAddress(_metaPages.Length, _pageSize, key, out var address) == false)
             {
                 Checks.Require(false, $"Cannot update version for {key}.");
                 return default;
             }
 
-            ref var sparsePage = ref _sparsePages[address.PageIndex];
-            return sparsePage.UpdateVersion(address.SlotIndex, key);
+            ref var metaPage = ref _metaPages[address.PageIndex];
+            return metaPage.UpdateVersion(address.SlotIndex, key);
         }
 
         public bool TryUpdateVersion(in SlotKey key, out SlotKey newKey)
@@ -786,15 +786,15 @@ namespace Collections.Extensions.SlotMaps
                 return false;
             }
 
-            if (Utils.FindPagedAddress(_sparsePages.Length, _pageSize, key, out var address) == false)
+            if (Utils.FindPagedAddress(_metaPages.Length, _pageSize, key, out var address) == false)
             {
                 Checks.Warning(false, $"Cannot update version for {key}.");
                 newKey = key;
                 return false;
             }
 
-            ref var sparsePage = ref _sparsePages[address.PageIndex];
-            return sparsePage.TryUpdateVersion(address.SlotIndex, key, out newKey);
+            ref var metaPage = ref _metaPages[address.PageIndex];
+            return metaPage.TryUpdateVersion(address.SlotIndex, key, out newKey);
         }
 
         /// <summary>
@@ -804,46 +804,46 @@ namespace Collections.Extensions.SlotMaps
         {
             _version++;
 
-            ref var sparsePages = ref _sparsePages;
-            ref var densePages = ref _densePages;
-            var length = (uint)sparsePages.Length;
+            ref var metaPages = ref _metaPages;
+            ref var valuePages = ref _valuePages;
+            var length = (uint)metaPages.Length;
 
             if (length > 0)
             {
-                ref var firstSparsePage = ref sparsePages[0];
-                ref var firstDensePage = ref densePages[0];
+                ref var firstSparsePage = ref metaPages[0];
+                ref var firstValuePage = ref valuePages[0];
                 
                 firstSparsePage.Clear();
-                firstDensePage.Clear();
+                firstValuePage.Clear();
 
-                sparsePages = new SparsePage[1] {
+                metaPages = new MetaPage[1] {
                     firstSparsePage
                 };
 
-                densePages = new DensePage[1] {
-                    firstDensePage
+                valuePages = new ValuePage[1] {
+                    firstValuePage
                 };
             }
 
             _freeKeys.Clear();
             _slotCount = 0;
             _tombstoneCount = 0;
-            _lastDenseIndex = -1;
+            _lastValueIndex = -1;
         }
 
         private bool TryGetNewKey(
               out SlotKey key
-            , out PagedAddress sparseAddress
-            , out uint denseIndex
+            , out PagedAddress metaAddress
+            , out uint valueIndex
         )
         {
-            if (TryReuseFreeKey(out key, out sparseAddress, out denseIndex))
+            if (TryReuseFreeKey(out key, out metaAddress, out valueIndex))
             {
                 return true;
             }
 
             var pageSize = _pageSize;
-            var pages = _sparsePages;
+            var pages = _metaPages;
             var numberOfPages = (uint)pages.Length;
             var lastPageIndex = numberOfPages - 1;
 
@@ -855,7 +855,7 @@ namespace Collections.Extensions.SlotMaps
             {
                 if (TryAddPage() == false)
                 {
-                    SetDefault(out key, out sparseAddress, out denseIndex);
+                    SetDefault(out key, out metaAddress, out valueIndex);
                     return false;
                 }
 
@@ -863,16 +863,16 @@ namespace Collections.Extensions.SlotMaps
                 lastPageSlotCount = 0;
             }
 
-            sparseAddress = new(lastPageIndex, lastPageSlotCount);
-            key = new SlotKey(sparseAddress.ToIndex(_pageSize));
-            denseIndex = (uint)(_lastDenseIndex + 1);
+            metaAddress = new(lastPageIndex, lastPageSlotCount);
+            key = new SlotKey(metaAddress.ToIndex(_pageSize));
+            valueIndex = (uint)(_lastValueIndex + 1);
             return true;
         }
 
         private bool TryReuseFreeKey(
               out SlotKey key
-            , out PagedAddress sparseAddress
-            , out uint denseIndex
+            , out PagedAddress metaAddress
+            , out uint valueIndex
         )
         {
             var pageSize = _pageSize;
@@ -880,20 +880,20 @@ namespace Collections.Extensions.SlotMaps
 
             if (freeKeys.Count <= _freeIndicesLimit)
             {
-                SetDefault(out key, out sparseAddress, out denseIndex);
+                SetDefault(out key, out metaAddress, out valueIndex);
                 return false;
             }
 
             var oldKey = freeKeys.Dequeue();
             key = oldKey.WithVersion(oldKey.Version + 1);
-            sparseAddress = PagedAddress.FromIndex(key.Index, pageSize);
-            denseIndex = (uint)(_lastDenseIndex + 1);
+            metaAddress = PagedAddress.FromIndex(key.Index, pageSize);
+            valueIndex = (uint)(_lastValueIndex + 1);
             return true;
         }
 
         private bool TryAddPage()
         {
-            var newPageIndex = _sparsePages.Length;
+            var newPageIndex = _metaPages.Length;
 
             if (newPageIndex >= _maxPageCount)
             {
@@ -906,11 +906,11 @@ namespace Collections.Extensions.SlotMaps
 
             var newPageLength = newPageIndex + 1;
 
-            Array.Resize(ref _sparsePages, newPageLength);
-            Array.Resize(ref _densePages, newPageLength);
+            Array.Resize(ref _metaPages, newPageLength);
+            Array.Resize(ref _valuePages, newPageLength);
 
-            _sparsePages[newPageIndex] = new SparsePage(_pageSize);
-            _densePages[newPageIndex] = new DensePage(_pageSize);
+            _metaPages[newPageIndex] = new MetaPage(_pageSize);
+            _valuePages[newPageIndex] = new ValuePage(_pageSize);
 
             return true;
         }
@@ -918,13 +918,13 @@ namespace Collections.Extensions.SlotMaps
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static void SetDefault(
               out SlotKey key
-            , out PagedAddress sparseAddress
-            , out uint denseIndex
+            , out PagedAddress metaAddress
+            , out uint valueIndex
         )
         {
             key = default;
-            sparseAddress = default;
-            denseIndex = default;
+            metaAddress = default;
+            valueIndex = default;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

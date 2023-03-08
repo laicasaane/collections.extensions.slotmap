@@ -5,21 +5,21 @@ namespace Collections.Extensions.SlotMaps
 {
     partial class SparseSlotMap<TValue>
     {
-        public readonly struct DensePage
+        public readonly struct ValuePage
         {
-            internal readonly uint[] _sparseIndices;
+            internal readonly uint[] _metaIndices;
             internal readonly TValue[] _values;
 
-            public DensePage(uint size)
+            public ValuePage(uint size)
             {
-                _sparseIndices = new uint[size];
+                _metaIndices = new uint[size];
                 _values = new TValue[size];
             }
 
-            public ReadOnlyMemory<uint> SparseIndices
+            public ReadOnlyMemory<uint> MetaIndices
             {
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
-                get => _sparseIndices;
+                get => _metaIndices;
             }
 
             public ReadOnlyMemory<TValue> Values
@@ -32,21 +32,21 @@ namespace Collections.Extensions.SlotMaps
             internal ref TValue GetRef(uint index)
                 => ref _values[index];
 
-            internal void Add(uint index, uint sparseIndex, TValue value)
+            internal void Add(uint index, uint metaIndex, TValue value)
             {
-                _sparseIndices[index] = sparseIndex;
+                _metaIndices[index] = metaIndex;
                 _values[index] = value;
             }
 
-            internal void Replace(uint index, uint sparseIndex, TValue value)
+            internal void Replace(uint index, uint metaIndex, TValue value)
             {
-                _sparseIndices[index] = sparseIndex;
+                _metaIndices[index] = metaIndex;
                 _values[index] = value;
             }
 
-            internal void Remove(uint index, out uint sparseIndex, out TValue value)
+            internal void Remove(uint index, out uint metaIndex, out TValue value)
             {
-                sparseIndex = _sparseIndices[index];
+                metaIndex = _metaIndices[index];
                 value = _values[index];
                 _values[index] = default;
             }

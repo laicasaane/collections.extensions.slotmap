@@ -5,17 +5,17 @@ namespace Collections.Extensions.SlotMaps
 {
     partial class SparseSlotMap<TValue>
     {
-        public struct SparsePage
+        public struct MetaPage
         {
             internal readonly SlotMeta[] _metas;
-            internal readonly uint[] _denseIndices;
+            internal readonly uint[] _valueIndices;
 
             private uint _count;
 
-            public SparsePage(uint size)
+            public MetaPage(uint size)
             {
                 _metas = new SlotMeta[size];
-                _denseIndices = new uint[size];
+                _valueIndices = new uint[size];
                 _count = 0;
             }
 
@@ -37,10 +37,10 @@ namespace Collections.Extensions.SlotMaps
                 get => _metas;
             }
 
-            public ReadOnlyMemory<uint> DenseIndices
+            public ReadOnlyMemory<uint> ValueIndices
             {
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
-                get => _denseIndices;
+                get => _valueIndices;
             }
 
             internal SlotKey UpdateVersion(uint index, in SlotKey key)
@@ -102,7 +102,7 @@ namespace Collections.Extensions.SlotMaps
                 return true;
             }
 
-            internal uint GetDenseIndex(uint index, in SlotKey key)
+            internal uint GetValueIndex(uint index, in SlotKey key)
             {
                 ref readonly var meta = ref _metas[index];
 
@@ -122,10 +122,10 @@ namespace Collections.Extensions.SlotMaps
                     , $"Key version {key.Version} is not equal to the slot version {meta.Version}."
                 );
 
-                return _denseIndices[index];
+                return _valueIndices[index];
             }
 
-            internal bool TryGetDenseIndex(uint index, in SlotKey key, out uint denseIndex)
+            internal bool TryGetValueIndex(uint index, in SlotKey key, out uint valueIndex)
             {
                 ref readonly var meta = ref _metas[index];
 
@@ -135,7 +135,7 @@ namespace Collections.Extensions.SlotMaps
                         , $"Key {key} is pointing to an invalid slot."
                     );
 
-                    denseIndex = default;
+                    valueIndex = default;
                     return false;
                 }
 
@@ -147,7 +147,7 @@ namespace Collections.Extensions.SlotMaps
                         , $"Key {key} is pointing to a dead slot."
                     );
 
-                    denseIndex = default;
+                    valueIndex = default;
                     return false;
                 }
 
@@ -157,7 +157,7 @@ namespace Collections.Extensions.SlotMaps
                         , $"Key {key} is pointing to an empty slot."
                     );
 
-                    denseIndex = default;
+                    valueIndex = default;
                     return false;
                 }
 
@@ -167,15 +167,15 @@ namespace Collections.Extensions.SlotMaps
                         , $"Key version {key.Version} is not equal to the slot version {meta.Version}."
                     );
 
-                    denseIndex = default;
+                    valueIndex = default;
                     return false;
                 }
 
-                denseIndex = _denseIndices[index];
+                valueIndex = _valueIndices[index];
                 return true;
             }
 
-            internal void Add(uint index, in SlotKey key, uint denseIndex)
+            internal void Add(uint index, in SlotKey key, uint valueIndex)
             {
                 ref var meta = ref _metas[index];
 
@@ -194,11 +194,11 @@ namespace Collections.Extensions.SlotMaps
                 );
 
                 meta = new(version, SlotState.Occupied);
-                _denseIndices[index] = denseIndex;
+                _valueIndices[index] = valueIndex;
                 _count++;
             }
 
-            public bool TryAdd(uint index, in SlotKey key, uint denseIndex)
+            public bool TryAdd(uint index, in SlotKey key, uint valueIndex)
             {
                 ref var meta = ref _metas[index];
                 var state = meta.State;
@@ -234,12 +234,12 @@ namespace Collections.Extensions.SlotMaps
                 }
 
                 meta = new(version, SlotState.Occupied);
-                _denseIndices[index] = denseIndex;
+                _valueIndices[index] = valueIndex;
                 _count++;
                 return true;
             }
 
-            internal SlotKey Replace(uint index, in SlotKey key, uint denseIndex)
+            internal SlotKey Replace(uint index, in SlotKey key, uint valueIndex)
             {
                 ref var meta = ref _metas[index];
 
@@ -266,13 +266,13 @@ namespace Collections.Extensions.SlotMaps
                     , $"Key version {version} is not equal to the slot version {currentVersion}."
                 );
 
-                _denseIndices[index] = denseIndex;
+                _valueIndices[index] = valueIndex;
                 currentVersion = version + 1;
                 meta = new(meta, currentVersion);
                 return key.WithVersion(currentVersion);
             }
 
-            internal bool TryReplace(uint index, in SlotKey key, uint denseIndex, out SlotKey newKey)
+            internal bool TryReplace(uint index, in SlotKey key, uint valueIndex, out SlotKey newKey)
             {
                 ref var meta = ref _metas[index];
 
@@ -331,7 +331,7 @@ namespace Collections.Extensions.SlotMaps
                     return false;
                 }
 
-                _denseIndices[index] = denseIndex;
+                _valueIndices[index] = valueIndex;
                 currentVersion = version + 1;
                 meta = new(meta, currentVersion);
                 newKey = key.WithVersion(currentVersion);
@@ -339,10 +339,10 @@ namespace Collections.Extensions.SlotMaps
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            internal void ReplaceDenseIndexUnsafe(uint index, uint denseIndex)
-                => _denseIndices[index] = denseIndex;
+            internal void ReplaceValueIndexUnsafe(uint index, uint valueIndex)
+                => _valueIndices[index] = valueIndex;
 
-            internal bool Remove(uint index, in SlotKey key, out uint denseIndex)
+            internal bool Remove(uint index, in SlotKey key, out uint valueIndex)
             {
                 ref var meta = ref _metas[index];
 
@@ -352,7 +352,7 @@ namespace Collections.Extensions.SlotMaps
                         , $"Key {key} is pointing to an invalid slot."
                     );
 
-                    denseIndex = 0;
+                    valueIndex = 0;
                     return false;
                 }
 
@@ -364,7 +364,7 @@ namespace Collections.Extensions.SlotMaps
                         , $"Key {key} is pointing to a dead slot."
                     );
 
-                    denseIndex = 0;
+                    valueIndex = 0;
                     return false;
                 }
 
@@ -374,7 +374,7 @@ namespace Collections.Extensions.SlotMaps
                         , $"Key {key} is pointing to an empty slot."
                     );
 
-                    denseIndex = 0;
+                    valueIndex = 0;
                     return false;
                 }
 
@@ -386,11 +386,11 @@ namespace Collections.Extensions.SlotMaps
                         , $"Key version {key.Version} is not equal to the slot version {currentVersion}."
                     );
 
-                    denseIndex = 0;
+                    valueIndex = 0;
                     return false;
                 }
 
-                denseIndex = _denseIndices[index];
+                valueIndex = _valueIndices[index];
                 meta = currentVersion == SlotVersion.MaxValue
                     ? new(meta, SlotState.Tombstone)
                     : new(meta, SlotState.Empty)

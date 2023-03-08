@@ -10,21 +10,21 @@ namespace Collections.Extensions.SlotMaps
             private readonly SparseSlotMap<TValue> _slotmap;
             private readonly int _version;
             private KeyValuePair<SlotKey, TValue> _current;
-            private long _denseIndex;
+            private long _valueIndex;
 
             public Enumerator(SparseSlotMap<TValue> slotmap)
             {
                 _slotmap = slotmap;
                 _version = slotmap._version;
                 _current = default;
-                _denseIndex = 0;
+                _valueIndex = 0;
             }
             
             public KeyValuePair<SlotKey, TValue> Current
             {
                 get
                 {
-                    if (_denseIndex == 0)
+                    if (_valueIndex == 0)
                     {
                         ThrowHelper.ThrowInvalidOperationException_InvalidOperation_EnumOpCantHappen();
                     }
@@ -37,7 +37,7 @@ namespace Collections.Extensions.SlotMaps
             {
                 get
                 {
-                    if (_denseIndex == 0)
+                    if (_valueIndex == 0)
                     {
                         ThrowHelper.ThrowInvalidOperationException_InvalidOperation_EnumOpCantHappen();
                     }
@@ -49,23 +49,23 @@ namespace Collections.Extensions.SlotMaps
             public bool MoveNext()
             {
                 var slotmap = _slotmap;
-                var lastDenseIndex = slotmap._lastDenseIndex;
+                var lastValueIndex = slotmap._lastValueIndex;
 
                 if (_version == slotmap._version
-                    && lastDenseIndex >= 0
-                    && _denseIndex <= lastDenseIndex
+                    && lastValueIndex >= 0
+                    && _valueIndex <= lastValueIndex
                 )
                 {
                     var pageSize = slotmap._pageSize;
-                    var denseAddress = PagedAddress.FromIndex(_denseIndex, pageSize);
-                    var densePage = slotmap._densePages[denseAddress.PageIndex];
-                    var sparseIndex = densePage._sparseIndices[denseAddress.SlotIndex];
-                    var sparseAddress = PagedAddress.FromIndex(sparseIndex, pageSize);
-                    var sparsePage = slotmap._sparsePages[sparseAddress.PageIndex];
-                    ref var meta = ref sparsePage._metas[sparseAddress.SlotIndex];
+                    var valueAddress = PagedAddress.FromIndex(_valueIndex, pageSize);
+                    var valuePage = slotmap._valuePages[valueAddress.PageIndex];
+                    var metaIndex = valuePage._metaIndices[valueAddress.SlotIndex];
+                    var metaAddress = PagedAddress.FromIndex(metaIndex, pageSize);
+                    var metaPage = slotmap._metaPages[metaAddress.PageIndex];
+                    ref var meta = ref metaPage._metas[metaAddress.SlotIndex];
 
-                    _current = new(new(sparseIndex, meta.Version), densePage._values[denseAddress.SlotIndex]);
-                    _denseIndex++;
+                    _current = new(new(metaIndex, meta.Version), valuePage._values[valueAddress.SlotIndex]);
+                    _valueIndex++;
                     return true;
                 }
 
@@ -79,7 +79,7 @@ namespace Collections.Extensions.SlotMaps
                     ThrowHelper.ThrowInvalidOperationException_InvalidOperation_EnumFailedVersion();
                 }
 
-                _denseIndex = _slotmap._lastDenseIndex + 1;
+                _valueIndex = _slotmap._lastValueIndex + 1;
                 _current = default;
                 return false;
             }
@@ -87,7 +87,7 @@ namespace Collections.Extensions.SlotMaps
             public void Reset()
             {
                 _current = default;
-                _denseIndex = 0;
+                _valueIndex = 0;
             }
 
             public void Dispose() { }
