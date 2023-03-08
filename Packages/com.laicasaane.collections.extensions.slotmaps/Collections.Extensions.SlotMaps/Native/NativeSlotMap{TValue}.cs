@@ -664,9 +664,20 @@ namespace Collections.Extensions.SlotMaps
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Contains(in SlotKey key)
-            => ValidateKeyAndMeta(key);
+        {
+            if (key.IsValid == false || key.Index >= _metas.Length)
+            {
+                return false;
+            }
+
+            var meta = _metas[(int)key.Index];
+
+            return meta.IsValid
+                && meta.State == SlotState.Occupied
+                && meta.Version == key.Version
+                ;
+        }
 
         public SlotKey UpdateVersion(in SlotKey key)
         {
