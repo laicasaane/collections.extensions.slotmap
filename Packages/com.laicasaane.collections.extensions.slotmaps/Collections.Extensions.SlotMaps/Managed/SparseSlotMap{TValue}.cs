@@ -23,7 +23,6 @@ namespace Collections.Extensions.SlotMaps
     /// </remarks>
     public partial class SparseSlotMap<TValue> : IPagedSlotMap<TValue>
     {
-        private static readonly string s_name = $"{nameof(SparseSlotMap<TValue>)}<{typeof(TValue).Name}>";
         private static readonly bool s_valueIsUnmanaged = RuntimeHelpers.IsReferenceOrContainsReferences<TValue>();
 
         private readonly uint _pageSize;
@@ -53,19 +52,19 @@ namespace Collections.Extensions.SlotMaps
             , int freeIndicesLimit = (int)PowerOfTwo.x32
         )
         {
-            Checks.Require(pageSize > 0, $"`{nameof(pageSize)}` must be greater than 0. Value: {pageSize}.");
+            Checks.Require(pageSize > 0, $"{nameof(pageSize)} must be greater than 0.");
 
             _pageSize = (uint)Math.Clamp(pageSize, 0, (int)PowerOfTwo.x1_073_741_824);
             _freeIndicesLimit = (uint)Math.Clamp(freeIndicesLimit, 0, pageSize);
 
             Checks.Require(
                   Utils.IsPowerOfTwo(_pageSize)
-                , $"`{nameof(pageSize)}` must be a power of two. Value: {_pageSize}."
+                , $"{nameof(pageSize)} must be a power of two"
             );
 
             Checks.Warning(
                   _freeIndicesLimit <= _pageSize
-                , $"`{nameof(freeIndicesLimit)}` should be lesser than or equal to {_pageSize}."
+                , $"{nameof(freeIndicesLimit)} should be lesser than or equal to {_pageSize}."
             );
 
             _maxPageCount = Utils.GetMaxPageCount(_pageSize);
@@ -153,14 +152,14 @@ namespace Collections.Extensions.SlotMaps
 
         public TValue Get(in SlotKey key)
         {
-            Checks.Require(key.IsValid, $"Key `{key}` is invalid.");
+            Checks.Require(key.IsValid, $"Key {key} is invalid.");
 
             var pageSize = _pageSize;
             var sparsePages = _sparsePages;
 
             if (Utils.FindPagedAddress(sparsePages.Length, pageSize, key, out var sparseAddress) == false)
             {
-                throw new SlotMapException($"Cannot find address for `{key}`");
+                throw new SlotMapException($"Cannot find address for {key}");
             }
 
             ref var sparsePage = ref sparsePages[sparseAddress.PageIndex];
@@ -176,8 +175,7 @@ namespace Collections.Extensions.SlotMaps
         {
             Checks.Require(
                   returnValues.Length >= keys.Length
-                , $"The length `{nameof(returnValues)}` must be greater than "
-                + $"or equal to the length of `{nameof(keys)}`."
+                , $"{nameof(returnValues)}.Length must be greater than or equal to {nameof(keys)}.Length."
             );
 
             var sparsePages = _sparsePages;
@@ -190,13 +188,12 @@ namespace Collections.Extensions.SlotMaps
             {
                 ref readonly var key = ref keys[i];
 
-                Checks.Require(key.IsValid, $"Key `{key}` is invalid.");
+                Checks.Require(key.IsValid, $"Key {key} is invalid.");
 
                 if (Utils.FindPagedAddress(pageLength, pageSize, key, out var sparseAddress) == false)
                 {
-                    throw new SlotMapException(
-                        $"Cannot find address for `{key}` at index {i}."
-                    );
+                    Checks.Require(false, $"Cannot find address for {key}.");
+                    continue;
                 }
 
                 ref var sparsePage = ref sparsePages[sparseAddress.PageIndex];
@@ -208,14 +205,15 @@ namespace Collections.Extensions.SlotMaps
 
         public ref readonly TValue GetRef(in SlotKey key)
         {
-            Checks.Require(key.IsValid, $"Key `{key}` is invalid.");
+            Checks.Require(key.IsValid, $"Key {key} is invalid.");
 
             var pageSize = _pageSize;
             var sparsePages = _sparsePages;
 
             if (Utils.FindPagedAddress(sparsePages.Length, pageSize, key, out var sparseAddress) == false)
             {
-                throw new SlotMapException($"Cannot find address for `{key}`.");
+                Checks.Require(false, $"Cannot find address for {key}.");
+                return ref Unsafe.NullRef<TValue>();
             }
 
             ref var sparsePage = ref sparsePages[sparseAddress.PageIndex];
@@ -228,7 +226,7 @@ namespace Collections.Extensions.SlotMaps
         {
             if (key.IsValid == false)
             {
-                Checks.Warning(false, $"Key `{key}` is invalid.");
+                Checks.Warning(false, $"Key {key} is invalid.");
                 return ref Unsafe.NullRef<TValue>();
             }
 
@@ -237,7 +235,7 @@ namespace Collections.Extensions.SlotMaps
 
             if (Utils.FindPagedAddress(sparsePages.Length, pageSize, key, out var sparseAddress) == false)
             {
-                Checks.Warning(false, $"Cannot find address for `{key}`.");
+                Checks.Warning(false, $"Cannot find address for {key}.");
                 return ref Unsafe.NullRef<TValue>();
             }
 
@@ -256,7 +254,7 @@ namespace Collections.Extensions.SlotMaps
         {
             if (key.IsValid == false)
             {
-                Checks.Warning(false, $"Key `{key}` is invalid.");
+                Checks.Warning(false, $"Key {key} is invalid.");
                 value = default;
                 return false;
             }
@@ -266,7 +264,7 @@ namespace Collections.Extensions.SlotMaps
 
             if (Utils.FindPagedAddress(sparsePages.Length, pageSize, key, out var sparseAddress) == false)
             {
-                Checks.Warning(false, $"Cannot find address for `{key} `.");
+                Checks.Warning(false, $"Cannot find address for {key} .");
                 value = default;
                 return false;
             }
@@ -294,8 +292,7 @@ namespace Collections.Extensions.SlotMaps
             if (returnKeys.Length < keys.Length)
             {
                 Checks.Warning(false
-                    , $"The length `{nameof(returnKeys)}` must be greater than "
-                    + $"or equal to the length of `{nameof(keys)}`."
+                    , $"{nameof(returnKeys)}.Length must be greater than or equal to {nameof(keys)}.Length."
                 );
 
                 returnValuesCount = 0;
@@ -305,8 +302,7 @@ namespace Collections.Extensions.SlotMaps
             if (returnValues.Length < keys.Length)
             {
                 Checks.Warning(false
-                    , $"The length `{nameof(returnValues)}` must be greater than "
-                    + $"or equal to the length of `{nameof(keys)}`."
+                    , $"{nameof(returnValues)}.Length must be greater than or equal to {nameof(keys)}.Length."
                 );
 
                 returnValuesCount = 0;
@@ -326,13 +322,13 @@ namespace Collections.Extensions.SlotMaps
 
                 if (key.IsValid == false)
                 {
-                    Checks.Warning(false, $"Key `{key}` is invalid.");
+                    Checks.Warning(false, $"Key {key} is invalid.");
                     continue;
                 }
 
                 if (Utils.FindPagedAddress(pageLength, pageSize, key, out var sparseAddress) == false)
                 {
-                    Checks.Warning(false, $"Cannot find address for `{key} `.");
+                    Checks.Warning(false, $"Cannot find address for {key} .");
                     continue;
                 }
 
@@ -359,10 +355,8 @@ namespace Collections.Extensions.SlotMaps
         {
             _version++;
 
-            if (TryGetNewKey(out var key, out var sparseAddress, out var denseIndex) == false)
-            {
-                throw new SlotMapException($"Cannot add `{value}` to {s_name}.");
-            }
+            var resultGetNewKey = TryGetNewKey(out var key, out var sparseAddress, out var denseIndex);
+            Checks.Require(resultGetNewKey, $"Cannot add {value}.");
 
             ref var sparsePage = ref _sparsePages[sparseAddress.PageIndex];
             sparsePage.Add(sparseAddress.SlotIndex, key, denseIndex);
@@ -386,8 +380,7 @@ namespace Collections.Extensions.SlotMaps
 
             Checks.Require(
                   returnKeys.Length >= values.Length
-                , $"The length `{nameof(returnKeys)}` must be greater than "
-                + $"or equal to the length of `{nameof(values)}`."
+                , $"{nameof(returnKeys)}.Length must be greater than or equal to {nameof(values)}.Length."
             );
 
             var sparsePages = _sparsePages;
@@ -402,12 +395,8 @@ namespace Collections.Extensions.SlotMaps
             {
                 ref readonly var value = ref values[i];
 
-                if (TryGetNewKey(out var key, out var sparseAddress, out var denseIndex) == false)
-                {
-                    throw new SlotMapException(
-                        $"Cannot add `{value}` to {s_name} at index {i}.."
-                    );
-                }
+                var resultGetNewKey = TryGetNewKey(out var key, out var sparseAddress, out var denseIndex);
+                Checks.Require(resultGetNewKey, $"Cannot add {value}.");
 
                 ref var sparsePage = ref sparsePages[sparseAddress.PageIndex];
                 sparsePage.Add(sparseAddress.SlotIndex, key, denseIndex);
@@ -428,7 +417,7 @@ namespace Collections.Extensions.SlotMaps
 
             if (TryGetNewKey(out key, out var sparseAddress, out var denseIndex) == false)
             {
-                Checks.Warning(false, $"Cannot add `{value}` to {s_name}.");
+                Checks.Warning(false, $"Cannot add {value}.");
                 return false;
             }
 
@@ -456,7 +445,7 @@ namespace Collections.Extensions.SlotMaps
 #if !DISABLE_SLOTMAP_CHECKS
             catch (Exception ex)
             {
-                Checks.Require(false, $"{s_name} is unexpectedly corrupted.", ex);
+                Checks.Require(false, $"The slot map is unexpectedly corrupted.", ex);
                 return false;
             }
 #endif
@@ -473,8 +462,7 @@ namespace Collections.Extensions.SlotMaps
             if (returnKeys.Length < values.Length)
             {
                 Checks.Warning(false
-                    , $"The length `{nameof(returnKeys)}` must be greater than "
-                    + $"or equal to the length of `{nameof(values)}`."
+                    , $"{nameof(returnKeys)}.Length must be greater than or equal to {nameof(values)}.Length."
                 );
 
                 returnKeyCount = 0;
@@ -496,9 +484,7 @@ namespace Collections.Extensions.SlotMaps
 
                 if (TryGetNewKey(out var key, out var sparseAddress, out var denseIndex) == false)
                 {
-                    Checks.Warning(false
-                        , $"Cannot add `{value}` to {s_name} at index {i}."
-                    );
+                    Checks.Warning(false, $"Cannot add {value}.");
                     continue;
                 }
 
@@ -527,7 +513,7 @@ namespace Collections.Extensions.SlotMaps
 #if !DISABLE_SLOTMAP_CHECKS
                 catch (Exception ex)
                 {
-                    Checks.Require(false, $"{s_name} is unexpectedly corrupted.", ex);
+                    Checks.Require(false, $"The slot map is unexpectedly corrupted.", ex);
                     continue;
                 }
 #endif
@@ -541,7 +527,7 @@ namespace Collections.Extensions.SlotMaps
         {
             _version++;
 
-            Checks.Require(key.IsValid, $"Key `{key}` is invalid.");
+            Checks.Require(key.IsValid, $"Key {key} is invalid.");
 
             var sparsePages = _sparsePages;
             var pageSize = _pageSize;
@@ -549,7 +535,8 @@ namespace Collections.Extensions.SlotMaps
 
             if (Utils.FindPagedAddress(pageLength, pageSize, key, out var sparseAddress) == false)
             {
-                throw new SlotMapException($"Cannot replace `{value}` in {s_name}.");
+                Checks.Require(false, $"Cannot replace {value}.");
+                return default;
             }
 
             ref var sparsePage = ref sparsePages[sparseAddress.PageIndex];
@@ -570,7 +557,7 @@ namespace Collections.Extensions.SlotMaps
 
             if (key.IsValid == false)
             {
-                Checks.Warning(false, $"Key `{key}` is invalid.");
+                Checks.Warning(false, $"Key {key} is invalid.");
                 newKey = key;
                 return false;
             }
@@ -610,7 +597,7 @@ namespace Collections.Extensions.SlotMaps
 #if !DISABLE_SLOTMAP_CHECKS
             catch (Exception ex)
             {
-                Checks.Require(false, $"{s_name} is unexpectedly corrupted.", ex);
+                Checks.Require(false, $"The slot map is unexpectedly corrupted.", ex);
                 return false;
             }
 #endif
@@ -622,7 +609,7 @@ namespace Collections.Extensions.SlotMaps
 
             if (key.IsValid == false)
             {
-                Checks.Warning(false, $"Key `{key}` is invalid.");
+                Checks.Warning(false, $"Key {key} is invalid.");
                 return false;
             }
 
@@ -683,7 +670,7 @@ namespace Collections.Extensions.SlotMaps
 #if !DISABLE_SLOTMAP_CHECKS
             catch (Exception ex)
             {
-                Checks.Require(false, $"{s_name} is unexpectedly corrupted.", ex);
+                Checks.Require(false, $"The slot map is unexpectedly corrupted.", ex);
                 return false;
             }
 #endif
@@ -710,7 +697,7 @@ namespace Collections.Extensions.SlotMaps
 
                 if (key.IsValid == false)
                 {
-                    Checks.Warning(false, $"Key `{key}` is invalid.");
+                    Checks.Warning(false, $"Key {key} is invalid.");
                     continue;
                 }
 
@@ -763,7 +750,7 @@ namespace Collections.Extensions.SlotMaps
         {
             if (key.IsValid == false)
             {
-                Checks.Warning(false, $"Key `{key}` is invalid.");
+                Checks.Warning(false, $"Key {key} is invalid.");
                 return false;
             }
 
@@ -778,11 +765,11 @@ namespace Collections.Extensions.SlotMaps
 
         public SlotKey UpdateVersion(in SlotKey key)
         {
-            Checks.Require(key.IsValid, $"Key `{key}` is invalid.");
+            Checks.Require(key.IsValid, $"Key {key} is invalid.");
 
             if (Utils.FindPagedAddress(_sparsePages.Length, _pageSize, key, out var address) == false)
             {
-                Checks.Require(false, $"Cannot update version for `{key}`.");
+                Checks.Require(false, $"Cannot update version for {key}.");
                 return default;
             }
 
@@ -794,14 +781,14 @@ namespace Collections.Extensions.SlotMaps
         {
             if (key.IsValid == false)
             {
-                Checks.Warning(false, $"Key `{key}` is invalid.");
+                Checks.Warning(false, $"Key {key} is invalid.");
                 newKey = key;
                 return false;
             }
 
             if (Utils.FindPagedAddress(_sparsePages.Length, _pageSize, key, out var address) == false)
             {
-                Checks.Warning(false, $"Cannot update version for `{key}`.");
+                Checks.Warning(false, $"Cannot update version for {key}.");
                 newKey = key;
                 return false;
             }
@@ -910,9 +897,8 @@ namespace Collections.Extensions.SlotMaps
 
             if (newPageIndex >= _maxPageCount)
             {
-                Checks.Warning(false,
-                      $"Cannot add new page because it has reached "
-                    + $"the maximum limit of {_maxPageCount} pages."
+                Checks.Warning(false
+                    , $"Cannot allocate more because it is limited {_maxPageCount} pages."
                 );
 
                 return false;

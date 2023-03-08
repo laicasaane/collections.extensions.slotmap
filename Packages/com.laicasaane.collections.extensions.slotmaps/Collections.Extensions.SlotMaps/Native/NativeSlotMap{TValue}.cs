@@ -854,7 +854,7 @@ namespace Collections.Extensions.SlotMaps
             );
 
             NativeChecks.Require(meta.Version == key.Version
-                , $"key.Version {key.Version} != meta.Version {meta.Version}."
+                , $"Key version {key.Version} is not equal to the slot version {meta.Version}."
             );
         }
 
@@ -906,7 +906,7 @@ namespace Collections.Extensions.SlotMaps
             if (meta.Version != key.Version)
             {
                 NativeChecks.Warning(false
-                    , $"key.Version {key.Version} != meta.Version {meta.Version}."
+                    , $"Key version {key.Version} is not equal to the slot version {meta.Version}."
                 );
 
                 return false;

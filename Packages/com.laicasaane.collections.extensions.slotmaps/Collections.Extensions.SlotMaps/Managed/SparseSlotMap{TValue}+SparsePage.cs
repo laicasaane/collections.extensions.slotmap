@@ -48,15 +48,15 @@ namespace Collections.Extensions.SlotMaps
                 ref readonly var meta = ref _metas[index];
 
                 Checks.Require(meta.IsValid
-                    , $"Cannot get value because `{key}` is pointing to an invalid slot."
+                    , $"Key {key} is pointing to an invalid slot."
                 );
 
                 Checks.Require(meta.State != SlotState.Tombstone
-                    , $"Cannot get value because `{key}` is pointing to a dead slot."
+                    , $"Key {key} is pointing to a dead slot."
                 );
 
                 Checks.Require(meta.State == SlotState.Occupied
-                    , $"Cannot get value because `{key}` is pointing to an empty slot."
+                    , $"Key {key} is pointing to an empty slot."
                 );
 
                 return key.WithVersion(meta.Version);
@@ -69,7 +69,7 @@ namespace Collections.Extensions.SlotMaps
                 if (meta.IsValid == false)
                 {
                     Checks.Warning(false
-                        , $"Cannot replace value because `{key}` is pointing to an invalid slot."
+                        , $"Key {key} is pointing to an invalid slot."
                     );
 
                     newKey = default;
@@ -81,7 +81,7 @@ namespace Collections.Extensions.SlotMaps
                 if (state == SlotState.Tombstone)
                 {
                     Checks.Warning(false
-                        , $"Cannot replace value because `{key}` is pointing to a dead slot."
+                        , $"Key {key} is pointing to a dead slot."
                     );
 
                     newKey = default;
@@ -91,7 +91,7 @@ namespace Collections.Extensions.SlotMaps
                 if (state != SlotState.Occupied)
                 {
                     Checks.Warning(false
-                        , $"Cannot replace value because `{key}` is pointing to an empty slot."
+                        , $"Key {key} is pointing to an empty slot."
                     );
 
                     newKey = default;
@@ -107,21 +107,19 @@ namespace Collections.Extensions.SlotMaps
                 ref readonly var meta = ref _metas[index];
 
                 Checks.Require(meta.IsValid
-                    , $"Cannot get value because `{key}` is pointing to an invalid slot."
+                    , $"Key {key} is pointing to an invalid slot."
                 );
 
                 Checks.Require(meta.State != SlotState.Tombstone
-                    , $"Cannot get value because `{key}` is pointing to a dead slot."
+                    , $"Key {key} is pointing to a dead slot."
                 );
 
                 Checks.Require(meta.State == SlotState.Occupied
-                    , $"Cannot get value because `{key}` is pointing to an empty slot."
+                    , $"Key {key} is pointing to an empty slot."
                 );
 
                 Checks.Require(meta.Version == key.Version
-                    , $"Cannot get value because `key.Version` "
-                    + $"is different from the current version. "
-                    + $"key.Version: {key.Version}. Current version: {meta.Version}."
+                    , $"Key version {key.Version} is not equal to the slot version {meta.Version}."
                 );
 
                 return _denseIndices[index];
@@ -134,7 +132,7 @@ namespace Collections.Extensions.SlotMaps
                 if (meta.IsValid == false)
                 {
                     Checks.Warning(false
-                        , $"Cannot get value because `{key}` is pointing to an invalid slot."
+                        , $"Key {key} is pointing to an invalid slot."
                     );
 
                     denseIndex = default;
@@ -146,7 +144,7 @@ namespace Collections.Extensions.SlotMaps
                 if (state == SlotState.Tombstone)
                 {
                     Checks.Warning(false
-                        , $"Cannot get value because `{key}` is pointing to a dead slot."
+                        , $"Key {key} is pointing to a dead slot."
                     );
 
                     denseIndex = default;
@@ -156,7 +154,7 @@ namespace Collections.Extensions.SlotMaps
                 if (state == SlotState.Empty)
                 {
                     Checks.Warning(false
-                        , $"Cannot get value because `{key}` is pointing to an empty slot."
+                        , $"Key {key} is pointing to an empty slot."
                     );
 
                     denseIndex = default;
@@ -166,9 +164,7 @@ namespace Collections.Extensions.SlotMaps
                 if (meta.Version != key.Version)
                 {
                     Checks.Warning(false
-                        , $"Cannot get value because `key.Version` "
-                        + $"is different from the current version. "
-                        + $"key.Version: {key.Version}. Current version: {meta.Version}."
+                        , $"Key version {key.Version} is not equal to the slot version {meta.Version}."
                     );
 
                     denseIndex = default;
@@ -184,19 +180,17 @@ namespace Collections.Extensions.SlotMaps
                 ref var meta = ref _metas[index];
 
                 Checks.Require(meta.State != SlotState.Tombstone
-                    , $"Cannot add value because `{key}` is pointing to a dead slot."
+                    , $"Key {key} is pointing to a dead slot."
                 );
 
                 Checks.Require(meta.State == SlotState.Empty
-                    , $"Cannot add value because `{key}` is pointing to an occupied slot."
+                    , $"Key {key} is pointing to an occupied slot."
                 );
 
                 var version = key.Version;
 
                 Checks.Require(meta.Version < version
-                    , $"Cannot add value because `key.Version` "
-                    + $"is lesser than or equal to the current version. "
-                    + $"key.Version: {version}. Current version: {meta.Version}."
+                    , $"Key version {version} is lesser than or equal to the slot version {meta.Version}."
                 );
 
                 meta = new(version, SlotState.Occupied);
@@ -212,7 +206,7 @@ namespace Collections.Extensions.SlotMaps
                 if (state == SlotState.Tombstone)
                 {
                     Checks.Warning(false
-                        , $"Cannot add value because `{key}` is pointing to a dead slot."
+                        , $"Key {key} is pointing to a dead slot."
                     );
 
                     return false;
@@ -221,7 +215,7 @@ namespace Collections.Extensions.SlotMaps
                 if (state != SlotState.Empty)
                 {
                     Checks.Warning(false
-                        , $"Cannot add value because `{key}` is pointing to an occupied slot."
+                        , $"Key {key} is pointing to an occupied slot."
                     );
 
                     return false;
@@ -233,9 +227,7 @@ namespace Collections.Extensions.SlotMaps
                 if (currentVersion >= version)
                 {
                     Checks.Warning(false
-                        , $"Cannot add value because `key.Version` "
-                        + $"is lesser than or equal to the current version. "
-                        + $"key.Version: {version}. Current version: {currentVersion}."
+                        , $"Key version {version} is lesser than or equal to the slot version {currentVersion}."
                     );
 
                     return false;
@@ -252,30 +244,26 @@ namespace Collections.Extensions.SlotMaps
                 ref var meta = ref _metas[index];
 
                 Checks.Require(meta.IsValid == true
-                    , $"Cannot replace value because `{key}` is pointing to an invalid slot."
+                    , $"Key {key} is pointing to an invalid slot."
                 );
 
                 Checks.Require(meta.State != SlotState.Tombstone
-                    , $"Cannot replace value because `{key}` is pointing to a dead slot."
+                    , $"Key {key} is pointing to a dead slot."
                 );
 
                 Checks.Require(meta.State == SlotState.Occupied
-                    , $"Cannot replace value because `{key}` is pointing to an empty slot."
+                    , $"Key {key} is pointing to an empty slot."
                 );
 
                 var currentVersion = meta.Version;
                 var version = key.Version;
 
                 Checks.Require(currentVersion < SlotVersion.MaxValue
-                    , $"Cannot replace value because `key.Version` "
-                    + $"has reached the maximum limit. "
-                    + $"key.Version: {version}. Current version: {currentVersion}."
+                    , $"Key version {version} has reached the maximum limit."
                 );
 
                 Checks.Require(currentVersion == version
-                    , $"Cannot replace value because `key.Version` "
-                    + $"is different from the current version. "
-                    + $"key.Version: {version}. Current version: {currentVersion}."
+                    , $"Key version {version} is not equal to the slot version {currentVersion}."
                 );
 
                 _denseIndices[index] = denseIndex;
@@ -291,7 +279,7 @@ namespace Collections.Extensions.SlotMaps
                 if (meta.IsValid == false)
                 {
                     Checks.Warning(false
-                        , $"Cannot replace value because `{key}` is pointing to an invalid slot."
+                        , $"Key {key} is pointing to an invalid slot."
                     );
 
                     newKey = default;
@@ -303,7 +291,7 @@ namespace Collections.Extensions.SlotMaps
                 if (state == SlotState.Tombstone)
                 {
                     Checks.Warning(false
-                        , $"Cannot replace value because `{key}` is pointing to a dead slot."
+                        , $"Key {key} is pointing to a dead slot."
                     );
 
                     newKey = default;
@@ -313,7 +301,7 @@ namespace Collections.Extensions.SlotMaps
                 if (state != SlotState.Occupied)
                 {
                     Checks.Warning(false
-                        , $"Cannot replace value because `{key}` is pointing to an empty slot."
+                        , $"Key {key} is pointing to an empty slot."
                     );
 
                     newKey = default;
@@ -326,9 +314,7 @@ namespace Collections.Extensions.SlotMaps
                 if (currentVersion >= SlotVersion.MaxValue)
                 {
                     Checks.Warning(false
-                        , $"Cannot replace value because `key.Version` "
-                        + $"has reached the maximum limit. "
-                        + $"key.Version: {version}. Current version: {currentVersion}."
+                        , $"Key version {version} has reached the maximum limit."
                     );
 
                     newKey = default;
@@ -338,9 +324,7 @@ namespace Collections.Extensions.SlotMaps
                 if (currentVersion != version)
                 {
                     Checks.Warning(false
-                        , $"Cannot replace value because `key.Version` "
-                        + $"is different from the current version. "
-                        + $"key.Version: {version}. Current version: {currentVersion}."
+                        , $"Key version {version} is not equal to the slot version {currentVersion}."
                     );
 
                     newKey = default;
@@ -365,7 +349,7 @@ namespace Collections.Extensions.SlotMaps
                 if (meta.IsValid == false)
                 {
                     Checks.Warning(false
-                        , $"Cannot remove value because `{key}` is pointing to an invalid slot."
+                        , $"Key {key} is pointing to an invalid slot."
                     );
 
                     denseIndex = 0;
@@ -377,7 +361,7 @@ namespace Collections.Extensions.SlotMaps
                 if (state == SlotState.Tombstone)
                 {
                     Checks.Warning(false
-                        , $"Cannot remove value because `{key}` is pointing to a dead slot."
+                        , $"Key {key} is pointing to a dead slot."
                     );
 
                     denseIndex = 0;
@@ -387,7 +371,7 @@ namespace Collections.Extensions.SlotMaps
                 if (state != SlotState.Occupied)
                 {
                     Checks.Warning(false
-                        , $"Cannot remove value because `{key}` is pointing to an empty slot."
+                        , $"Key {key} is pointing to an empty slot."
                     );
 
                     denseIndex = 0;
@@ -399,9 +383,7 @@ namespace Collections.Extensions.SlotMaps
                 if (currentVersion != key.Version)
                 {
                     Checks.Warning(false
-                        , $"Cannot remove value because the `key.Version` "
-                        + $"is different from the current version. "
-                        + $"key.Version: {key.Version}. Current version: {currentVersion}."
+                        , $"Key version {key.Version} is not equal to the slot version {currentVersion}."
                     );
 
                     denseIndex = 0;

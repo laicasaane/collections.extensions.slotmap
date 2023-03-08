@@ -32,7 +32,7 @@ namespace Collections.Extensions.SlotMaps
 
         public SlotKey(uint index, SlotVersion version) : this()
         {
-            Checks.Require(version.IsValid, $"`{nameof(version)}` is invalid.");
+            Checks.Require(version.IsValid, $"{nameof(version)} is invalid.");
 
             _index = index;
             _version = version;
@@ -70,7 +70,7 @@ namespace Collections.Extensions.SlotMaps
 #endif
         public SlotKey WithVersion(SlotVersion version)
         {
-            Checks.Require(version.IsValid, $"`{nameof(version)}` is invalid.");
+            Checks.Require(version.IsValid, $"{nameof(version)} is invalid.");
 
             return new(_index, version);
         }

@@ -46,7 +46,7 @@ namespace Collections.Extensions.SlotMaps
         {
             if (key.IsValid == false)
             {
-                Checks.Warning(false, $"`{nameof(key)}` is invalid. Key value: {key}.");
+                Checks.Warning(false, $"Key {key} is invalid");
 
                 address = default;
                 return false;
@@ -58,7 +58,7 @@ namespace Collections.Extensions.SlotMaps
             if (address.PageIndex >= pageCount)
             {
                 Checks.Warning(false
-                    , $"`{nameof(key)}.{nameof(SlotKey.Index)}` is out of range. Key value: {key}."
+                    , $"Key index {key.Index} is out of range."
                 );
 
                 address = default;

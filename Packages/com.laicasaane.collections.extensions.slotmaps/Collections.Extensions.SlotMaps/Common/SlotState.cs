@@ -31,7 +31,7 @@ namespace Collections.Extensions.SlotMaps
 
         public SlotState(byte value)
         {
-            Checks.Warning(value <= MAX, $"`{nameof(value)}` should be lesser than or equal to {MAX}. Value: {value}.");
+            Checks.Warning(value <= MAX, $"{nameof(value)} should be lesser than or equal to {MAX}. Value: {value}.");
 
             if (value > MAX)
                 _raw = MAX;
