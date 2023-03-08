@@ -108,6 +108,13 @@ namespace Collections.Extensions.SlotMaps
 
         public void Dispose()
         {
+            if (_freeKeys.IsCreated)
+            {
+                _freeKeys.Dispose();
+            }
+
+            _freeKeys = default;
+
             if (_metas.IsCreated)
             {
                 _metas.Dispose();
@@ -121,13 +128,6 @@ namespace Collections.Extensions.SlotMaps
             }
 
             _values = default;
-
-            if (_freeKeys.IsCreated)
-            {
-                _freeKeys.Dispose();
-            }
-
-            _freeKeys = default;
 
             if (_slotCount.IsCreated)
             {
@@ -156,8 +156,6 @@ namespace Collections.Extensions.SlotMaps
             }
 
             _nextIndexToUse = default;
-
-
         }
 
         public bool IsCreated => _metas.IsCreated;
@@ -669,6 +667,7 @@ namespace Collections.Extensions.SlotMaps
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Contains(in SlotKey key)
             => ValidateKeyAndMeta(key);
 
