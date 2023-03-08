@@ -7,7 +7,7 @@ namespace Collections.Extensions.SlotMaps
 {
     internal static class NativeArrayUtils
     {
-        public static void Resize<T>(
+        public static void Grow<T>(
               ref this NativeArray<T> array
             , uint amount
             , Allocator allocator

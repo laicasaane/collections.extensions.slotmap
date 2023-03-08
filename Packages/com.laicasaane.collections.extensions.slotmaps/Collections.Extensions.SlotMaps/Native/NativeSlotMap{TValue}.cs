@@ -801,8 +801,8 @@ namespace Collections.Extensions.SlotMaps
                     return false;
                 }
 
-                _metas.Resize(_allocationSize, _allocator);
-                _values.Resize(_allocationSize, _allocator, NativeArrayOptions.UninitializedMemory);
+                _metas.Grow(_allocationSize, _allocator);
+                _values.Grow(_allocationSize, _allocator, NativeArrayOptions.UninitializedMemory);
             }
 
             key = new SlotKey((uint)nextIndex);
