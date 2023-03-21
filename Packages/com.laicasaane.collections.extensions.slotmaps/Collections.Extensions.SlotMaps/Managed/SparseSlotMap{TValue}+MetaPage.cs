@@ -5,7 +5,7 @@ namespace Collections.Extensions.SlotMaps
 {
     partial class SparseSlotMap<TValue>
     {
-        public struct MetaPage
+        public readonly struct MetaPage
         {
             internal readonly SlotMeta[] _metas;
             internal readonly uint[] _valueIndices;

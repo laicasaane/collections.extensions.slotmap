@@ -5,7 +5,7 @@ namespace Collections.Extensions.SlotMaps
 {
     partial class SlotMap<TValue>
     {
-        public struct Page
+        public readonly struct Page
         {
             internal readonly SlotMeta[] _metas;
             internal readonly TValue[] _values;
