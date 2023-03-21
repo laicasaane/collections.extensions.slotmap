@@ -189,6 +189,15 @@ namespace Collections.Extensions.SlotMaps
         }
 
         /// <summary>
+        /// The maximum number of slots that can be allocated.
+        /// </summary>
+        public uint MaxSlotCount
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => _maxSlotCount;
+        }
+
+        /// <summary>
         /// The number of slots that are tombstone and cannot be used anymore.
         /// </summary>
         public uint TombstoneCount
