@@ -422,7 +422,6 @@ namespace Collections.Extensions.SlotMaps
             }
 
             var length = keys.Length;
-            var destIndex = 0;
 
             for (var i = 0; i < length; i++)
             {
@@ -432,7 +431,6 @@ namespace Collections.Extensions.SlotMaps
                 {
                     returnKeys.Add(key);
                     returnValues.Add(value);
-                    destIndex++;
                 }
             }
 
@@ -638,7 +636,6 @@ namespace Collections.Extensions.SlotMaps
             }
 
             var length = values.Length;
-            var resultIndex = 0;
 
             if (TrySetCapacity(_slotCount.Value + (uint)length) == false)
             {
@@ -650,7 +647,6 @@ namespace Collections.Extensions.SlotMaps
                 if (TryAdd(values[i], out var key))
                 {
                     returnKeys.Add(key);
-                    resultIndex++;
                 }
             }
 
