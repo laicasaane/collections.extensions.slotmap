@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
 namespace Collections.Extensions.SlotMaps
 {
@@ -15,16 +14,7 @@ namespace Collections.Extensions.SlotMaps
 
         TValue Get(in SlotKey key);
 
-        void GetRange(in ReadOnlySpan<SlotKey> keys, in Span<TValue> returnItems);
-
         bool TryGet(in SlotKey key, out TValue value);
-
-        bool TryGetRange(
-              in ReadOnlySpan<SlotKey> keys
-            , in Span<SlotKey> returnKeys
-            , in Span<TValue> returnValues
-            , out uint returnItemCount
-        );
 
         SlotKey UpdateVersion(in SlotKey key);
 
@@ -35,11 +25,7 @@ namespace Collections.Extensions.SlotMaps
     {
         SlotKey Add(TValue value);
 
-        void AddRange(in ReadOnlySpan<TValue> values, in Span<SlotKey> returnKeys);
-
         bool Remove(in SlotKey key);
-
-        void RemoveRange(in ReadOnlySpan<SlotKey> keys);
 
         SlotKey Replace(in SlotKey key, TValue value);
 
@@ -48,11 +34,5 @@ namespace Collections.Extensions.SlotMaps
         bool TryAdd(TValue value, out SlotKey key);
 
         bool TryReplace(in SlotKey key, TValue value, out SlotKey newKey);
-
-        bool TryAddRange(
-              in ReadOnlySpan<TValue> values
-            , in Span<SlotKey> returnKeys
-            , out uint returnKeyCount
-        );
     }
 }
