@@ -161,38 +161,6 @@ namespace Collections.Extensions.SlotMaps
             return page.GetRef(address.SlotIndex, key);
         }
 
-        public void GetRange(
-              in ReadOnlySpan<SlotKey> keys
-            , in Span<TValue> returnValues
-        )
-        {
-            Checks.Require(
-                  returnValues.Length >= keys.Length
-                , $"{nameof(returnValues)}.Length must be greater than or equal to {nameof(keys)}.Length."
-            );
-
-            var pages = _pages;
-            var pageLength = pages.Length;
-            var pageSize = _pageSize;
-            var length = keys.Length;
-
-            for (var i = 0; i < length; i++)
-            {
-                ref readonly var key = ref keys[i];
-
-                Checks.Require(key.IsValid, $"Key {key} is invalid.");
-
-                if (Utils.FindPagedAddress(pageLength, pageSize, key, out var address) == false)
-                {
-                    Checks.Require(false, $"Cannot find address for {key}.");
-                    continue;
-                }
-
-                ref var page = ref pages[address.PageIndex];
-                returnValues[i] = page.GetRef(address.SlotIndex, key);
-            }
-        }
-
         public ref readonly TValue GetRef(in SlotKey key)
         {
             Checks.Require(key.IsValid, $"Key {key} is invalid.");
@@ -254,71 +222,6 @@ namespace Collections.Extensions.SlotMaps
             return true;
         }
 
-        public bool TryGetRange(
-              in ReadOnlySpan<SlotKey> keys
-            , in Span<SlotKey> returnKeys
-            , in Span<TValue> returnValues
-            , out uint returnValuesCount
-        )
-        {
-            if (returnKeys.Length < keys.Length)
-            {
-                Checks.Warning(false
-                    , $"{nameof(returnKeys)}.Length must be greater than or equal to {nameof(keys)}.Length."
-                );
-
-                returnValuesCount = 0;
-                return false;
-            }
-
-            if (returnValues.Length < keys.Length)
-            {
-                Checks.Require(false
-                    , $"{nameof(returnValues)}.Length must be greater than or equal to {nameof(keys)}.Length."
-                );
-
-                returnValuesCount = 0;
-                return false;
-            }
-
-            var pages = _pages;
-            var pageLength = pages.Length;
-            var pageSize = _pageSize;
-            var length = keys.Length;
-            var destIndex = 0;
-
-            for (var i = 0; i < length; i++)
-            {
-                ref readonly var key = ref keys[i];
-
-                if (key.IsValid == false)
-                {
-                    Checks.Warning(false, $"Key {key} is invalid.");
-                    continue;
-                }
-
-                if (Utils.FindPagedAddress(pageLength, pageSize, key, out var address) == false)
-                {
-                    continue;
-                }
-
-                ref var page = ref pages[address.PageIndex];
-                ref var valueRef = ref page.GetRefNotThrow(address.SlotIndex, key);
-
-                if (Unsafe.IsNullRef<TValue>(ref valueRef))
-                {
-                    continue;
-                }
-
-                returnKeys[destIndex] = key;
-                returnValues[destIndex] = valueRef;
-                destIndex++;
-            }
-
-            returnValuesCount = (uint)destIndex;
-            return true;
-        }
-
         public SlotKey Add(TValue value)
         {
             _version++;
@@ -330,39 +233,6 @@ namespace Collections.Extensions.SlotMaps
             page.Add(address.SlotIndex, key, value);
             _slotCount++;
             return key;
-        }
-
-        public void AddRange(
-              in ReadOnlySpan<TValue> values
-            , in Span<SlotKey> returnKeys
-        )
-        {
-            Checks.Require(
-                  returnKeys.Length >= values.Length
-                , $"{nameof(returnKeys)}.Length must be greater than or equal to {nameof(values)}.Length."
-            );
-
-            _version++;
-
-            var pages = _pages;
-            var length = values.Length;
-
-            ref var slotCount = ref _slotCount;
-
-            SetCapacity(slotCount + (uint)length);
-
-            for (var i = 0; i < length; i++)
-            {
-                ref readonly var value = ref values[i];
-
-                var resultGetNewKey = TryGetNewKey(out var key, out var address);
-                Checks.Require(resultGetNewKey, $"Cannot add {value}.");
-
-                ref var page = ref pages[address.PageIndex];
-                page.Add(address.SlotIndex, key, value);
-                slotCount++;
-                returnKeys[i] = key;
-            }
         }
 
         public bool TryAdd(TValue value, out SlotKey key)
@@ -384,61 +254,6 @@ namespace Collections.Extensions.SlotMaps
             }
 
             return false;
-        }
-
-        public bool TryAddRange(
-              in ReadOnlySpan<TValue> values
-            , in Span<SlotKey> returnKeys
-            , out uint returnKeyCount
-        )
-        {
-            _version++;
-
-            if (returnKeys.Length < values.Length)
-            {
-                Checks.Warning(false
-                    , $"{nameof(returnKeys)}.Length must be greater than or equal to {nameof(values)}.Length."
-                );
-
-                returnKeyCount = 0;
-                return false;
-            }
-
-            var pages = _pages;
-            var length = values.Length;
-            var resultIndex = 0;
-
-            ref var slotCount = ref _slotCount;
-
-            if (TrySetCapacity(slotCount + (uint)length) == false)
-            {
-                returnKeyCount = 0;
-                return false;
-            }
-
-            for (var i = 0; i < length; i++)
-            {
-                ref readonly var value = ref values[i];
-
-                if (TryGetNewKey(out var key, out var address) == false)
-                {
-                    Checks.Warning(false, $"Cannot add {value}.");
-                    continue;
-                }
-
-                ref var page = ref pages[address.PageIndex];
-
-                if (page.TryAdd(address.SlotIndex, key, value))
-                {
-                    returnKeys[resultIndex] = key;
-
-                    slotCount++;
-                    resultIndex++;
-                }
-            }
-
-            returnKeyCount = (uint)resultIndex;
-            return true;
         }
 
         public SlotKey Replace(in SlotKey key, TValue value)
@@ -515,54 +330,6 @@ namespace Collections.Extensions.SlotMaps
             }
 
             return true;
-        }
-
-        public void RemoveRange(in ReadOnlySpan<SlotKey> keys)
-        {
-            _version++;
-
-            var pages = _pages;
-            var pageLength = pages.Length;
-            var pageSize = _pageSize;
-            var freeKeys = _freeKeys;
-            var length = keys.Length;
-
-            ref var slotCount = ref _slotCount;
-            ref var tombstoneCount = ref _tombstoneCount;
-
-            for (var i = 0; i < length; i++)
-            {
-                ref readonly var key = ref keys[i];
-
-                if (key.IsValid == false)
-                {
-                    Checks.Warning(key.IsValid, $"Key {key} is invalid.");
-                    continue;
-                }
-
-                if (Utils.FindPagedAddress(pageLength, pageSize, key, out var address) == false)
-                {
-                    continue;
-                }
-
-                ref var page = ref pages[address.PageIndex];
-
-                if (page.Remove(address.SlotIndex, key) == false)
-                {
-                    continue;
-                }
-
-                slotCount--;
-
-                if (key.Version < SlotVersion.MaxValue)
-                {
-                    freeKeys.Enqueue(key);
-                }
-                else
-                {
-                    tombstoneCount++;
-                }
-            }
         }
 
         public bool Contains(in SlotKey key)
