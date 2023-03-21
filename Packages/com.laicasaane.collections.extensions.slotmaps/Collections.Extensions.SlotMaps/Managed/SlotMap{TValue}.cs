@@ -116,6 +116,15 @@ namespace Collections.Extensions.SlotMaps
         }
 
         /// <summary>
+        /// The maximum number of pages that can be allocated.
+        /// </summary>
+        public uint MaxPageCount
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => _maxPageCount;
+        }
+
+        /// <summary>
         /// The number of stored slots.
         /// </summary>
         public uint SlotCount
