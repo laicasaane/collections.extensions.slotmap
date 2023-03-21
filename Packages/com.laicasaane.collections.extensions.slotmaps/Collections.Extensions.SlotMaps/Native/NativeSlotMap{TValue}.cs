@@ -225,8 +225,8 @@ namespace Collections.Extensions.SlotMaps
         }
 
         public void GetRange(
-              in ReadOnlySpan<SlotKey> keys
-            , in Span<TValue> returnValues
+              in NativeArray<SlotKey> keys
+            , NativeArray<TValue> returnValues
         )
         {
             NativeChecks.Require(
@@ -239,6 +239,24 @@ namespace Collections.Extensions.SlotMaps
             for (var i = 0; i < length; i++)
             {
                 returnValues[i] = Get(keys[i]);
+            }
+        }
+
+        public void GetRange(
+              in NativeArray<SlotKey> keys
+            , NativeList<TValue> returnValues
+        )
+        {
+            NativeChecks.Require(
+                  returnValues.Length >= keys.Length
+                , $"{nameof(returnValues)}.Length must be greater than or equal to {nameof(keys)}.Length."
+            );
+
+            var length = keys.Length;
+
+            for (var i = 0; i < length; i++)
+            {
+                returnValues.Add(Get(keys[i]));
             }
         }
 
@@ -272,9 +290,9 @@ namespace Collections.Extensions.SlotMaps
         }
 
         public bool TryGetRange(
-              in ReadOnlySpan<SlotKey> keys
-            , in Span<SlotKey> returnKeys
-            , in Span<TValue> returnValues
+              in NativeArray<SlotKey> keys
+            , NativeArray<SlotKey> returnKeys
+            , NativeArray<TValue> returnValues
             , out uint returnValuesCount
         )
         {
@@ -303,7 +321,7 @@ namespace Collections.Extensions.SlotMaps
 
             for (var i = 0; i < length; i++)
             {
-                ref readonly var key = ref keys[i];
+                var key = keys[i];
 
                 if (TryGet(key, out var value))
                 {
@@ -314,6 +332,48 @@ namespace Collections.Extensions.SlotMaps
             }
 
             returnValuesCount = (uint)destIndex;
+            return true;
+        }
+
+        public bool TryGetRange(
+              in NativeArray<SlotKey> keys
+            , NativeList<SlotKey> returnKeys
+            , NativeList<TValue> returnValues
+        )
+        {
+            if (returnKeys.Length < keys.Length)
+            {
+                NativeChecks.Warning(false
+                    , $"{nameof(returnKeys)}.Length must be greater than or equal to {nameof(keys)}.Length."
+                );
+
+                return false;
+            }
+
+            if (returnValues.Length < keys.Length)
+            {
+                NativeChecks.Require(false
+                    , $"{nameof(returnValues)}.Length must be greater than or equal to {nameof(keys)}.Length."
+                );
+
+                return false;
+            }
+
+            var length = keys.Length;
+            var destIndex = 0;
+
+            for (var i = 0; i < length; i++)
+            {
+                var key = keys[i];
+
+                if (TryGet(key, out var value))
+                {
+                    returnKeys.Add(key);
+                    returnValues.Add(value);
+                    destIndex++;
+                }
+            }
+
             return true;
         }
 
@@ -352,8 +412,8 @@ namespace Collections.Extensions.SlotMaps
         }
 
         public void AddRange(
-              in ReadOnlySpan<TValue> values
-            , in Span<SlotKey> returnKeys
+              in NativeArray<TValue> values
+            , NativeArray<SlotKey> returnKeys
         )
         {
             _version.Value++;
@@ -370,6 +430,28 @@ namespace Collections.Extensions.SlotMaps
             for (var i = 0; i < length; i++)
             {
                 returnKeys[i] = Add(values[i]);
+            }
+        }
+
+        public void AddRange(
+              in NativeArray<TValue> values
+            , NativeList<SlotKey> returnKeys
+        )
+        {
+            _version.Value++;
+
+            NativeChecks.Require(
+                  returnKeys.Length >= values.Length
+                , $"{nameof(returnKeys)}.Length must be greater than or equal to {nameof(values)}.Length."
+            );
+
+            var length = values.Length;
+
+            SetCapacity(_slotCount.Value + (uint)length);
+
+            for (var i = 0; i < length; i++)
+            {
+                returnKeys.Add(Add(values[i]));
             }
         }
 
@@ -427,8 +509,8 @@ namespace Collections.Extensions.SlotMaps
         }
 
         public bool TryAddRange(
-              in ReadOnlySpan<TValue> values
-            , in Span<SlotKey> returnKeys
+              in NativeArray<TValue> values
+            , NativeArray<SlotKey> returnKeys
             , out uint returnKeyCount
         )
         {
@@ -463,6 +545,42 @@ namespace Collections.Extensions.SlotMaps
             }
 
             returnKeyCount = (uint)resultIndex;
+            return true;
+        }
+
+        public bool TryAddRange(
+              in NativeArray<TValue> values
+            , NativeList<SlotKey> returnKeys
+        )
+        {
+            _version.Value++;
+
+            if (returnKeys.Length < values.Length)
+            {
+                NativeChecks.Warning(false
+                    , $"{nameof(returnKeys)}.Length must be greater than or equal to {nameof(values)}.Length."
+                );
+
+                return false;
+            }
+
+            var length = values.Length;
+            var resultIndex = 0;
+
+            if (TrySetCapacity(_slotCount.Value + (uint)length) == false)
+            {
+                return false;
+            }
+
+            for (var i = 0; i < length; i++)
+            {
+                if (TryAdd(values[i], out var key))
+                {
+                    returnKeys.Add(key);
+                    resultIndex++;
+                }
+            }
+
             return true;
         }
 
@@ -669,7 +787,7 @@ namespace Collections.Extensions.SlotMaps
             return true;
         }
 
-        public void RemoveRange(in ReadOnlySpan<SlotKey> keys)
+        public void RemoveRange(in NativeArray<SlotKey> keys)
         {
             _version.Value++;
 
