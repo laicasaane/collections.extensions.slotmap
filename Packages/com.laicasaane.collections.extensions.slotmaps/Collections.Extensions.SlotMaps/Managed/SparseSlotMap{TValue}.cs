@@ -856,33 +856,40 @@ namespace Collections.Extensions.SlotMaps
         }
 
         /// <summary>
-        /// Clear the first page, but remove every other pages.
+        /// Clear everything and re-allocate to <paramref name="newSlotCount"/>.
+        /// </summary>
+        public void Reset(uint newSlotCount)
+        {
+            _version++;
+
+            var newPageCount = CalculateNewPageCount(newSlotCount);
+            _metaPages = new MetaPage[newPageCount];
+            _valuePages = new ValuePage[newPageCount];
+
+            var pageSize = _pageSize;
+            var metaPages = _metaPages;
+            var valuePages = _valuePages;
+
+            for (var i = 0; i < newPageCount; i++)
+            {
+                metaPages[i] = new MetaPage(pageSize);
+                valuePages[i] = new ValuePage(pageSize);
+            }
+
+            _freeKeys.Clear();
+            _slotCount = 0;
+            _tombstoneCount = 0;
+        }
+
+        /// <summary>
+        /// Clear everything and re-allocate 1 page.
         /// </summary>
         public void Reset()
         {
             _version++;
 
-            ref var metaPages = ref _metaPages;
-            ref var valuePages = ref _valuePages;
-            var length = (uint)metaPages.Length;
-
-            if (length > 0)
-            {
-                ref var firstSparsePage = ref metaPages[0];
-                ref var firstValuePage = ref valuePages[0];
-                
-                firstSparsePage.Clear();
-                firstValuePage.Clear();
-
-                metaPages = new MetaPage[1] {
-                    firstSparsePage
-                };
-
-                valuePages = new ValuePage[1] {
-                    firstValuePage
-                };
-            }
-
+            _metaPages = new MetaPage[1] { new MetaPage(_pageSize) };
+            _valuePages = new ValuePage[1] { new ValuePage(_pageSize) };
             _freeKeys.Clear();
             _slotCount = 0;
             _tombstoneCount = 0;
@@ -978,7 +985,7 @@ namespace Collections.Extensions.SlotMaps
             var newPageCount = newSlotCount / _pageSize;
             var redundant = newSlotCount - (newPageCount * _pageSize);
 
-            if (redundant > 0)
+            if (redundant > 0 || newPageCount == 0)
             {
                 newPageCount += 1;
             }

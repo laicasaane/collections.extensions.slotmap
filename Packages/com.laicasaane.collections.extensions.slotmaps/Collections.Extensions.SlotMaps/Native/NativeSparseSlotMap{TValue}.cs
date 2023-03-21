@@ -906,17 +906,22 @@ namespace Collections.Extensions.SlotMaps
             return true;
         }
 
-        private void Grow(uint newSlotCount)
+        private uint CalculateGrowSize(uint newSlotCount)
         {
             var pageCount = newSlotCount / _allocationSize;
             var redundant = newSlotCount - (pageCount * _allocationSize);
 
-            if (redundant > 0)
+            if (redundant > 0 || pageCount == 0)
             {
                 pageCount += 1;
             }
 
-            var allocSize = pageCount * _allocationSize;
+            return Math.Clamp(pageCount * _allocationSize, 0, (int)PowerOfTwo.x1_073_741_824);
+        }
+
+        private void Grow(uint newSlotCount)
+        {
+            var allocSize = CalculateGrowSize(newSlotCount);
             var allocator = _allocator;
 
             _metas.Grow(allocSize, allocator);
@@ -927,7 +932,34 @@ namespace Collections.Extensions.SlotMaps
         }
 
         /// <summary>
-        /// Clear the first page, but remove every other pages.
+        /// Clear everything and re-allocate to <paramref name="newSlotCount"/>.
+        /// </summary>
+        public void Reset(uint newSlotCount)
+        {
+            _version.Value++;
+
+            var allocSize = (int)CalculateGrowSize(newSlotCount);
+
+            _metas.Dispose();
+            _valueIndices.Dispose();
+            _values.Dispose();
+            _metaIndices.Dispose();
+            _freeKeys.Clear();
+
+            _metas = new NativeArray<SlotMeta>(allocSize, _allocator);
+            _valueIndices = new NativeArray<int>(allocSize, _allocator);
+
+            _values = new NativeArray<TValue>(allocSize, _allocator, NativeArrayOptions.UninitializedMemory);
+            _metaIndices = new NativeArray<int>(allocSize, _allocator);
+
+            _slotCount.Value = 0;
+            _tombstoneCount.Value = 0;
+            _lastValueIndex.Value = -1;
+            _nextMetaIndexToUse.Value = 0;
+        }
+
+        /// <summary>
+        /// Clear everything and re-allocate to <see cref="AllocationSize"/>.
         /// </summary>
         public void Reset()
         {

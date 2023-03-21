@@ -658,25 +658,33 @@ namespace Collections.Extensions.SlotMaps
         }
 
         /// <summary>
-        /// Clear the first page, but remove every other pages.
+        /// Clear everything and re-allocate to <paramref name="newSlotCount"/>.
+        /// </summary>
+        public void Reset(uint newSlotCount)
+        {
+            _version++;
+
+            var newPageCount = CalculateNewPageCount(newSlotCount);
+            _pages = new Page[newPageCount];
+
+            for (var i = 0; i < newPageCount; i++)
+            {
+                _pages[i] = new Page(_pageSize);
+            }
+
+            _freeKeys.Clear();
+            _slotCount = 0;
+            _tombstoneCount = 0;
+        }
+
+        /// <summary>
+        /// Clear everything and re-allocate 1 page.
         /// </summary>
         public void Reset()
         {
             _version++;
 
-            ref var pages = ref _pages;
-            var length = (uint)pages.Length;
-
-            if (length > 0)
-            {
-                ref var firstPage = ref pages[0];
-                firstPage.Clear();
-
-                pages = new Page[1] {
-                    firstPage
-                };
-            }
-
+            _pages = new Page[1] { new Page(_pageSize) };
             _freeKeys.Clear();
             _slotCount = 0;
             _tombstoneCount = 0;
@@ -757,7 +765,7 @@ namespace Collections.Extensions.SlotMaps
             var newPageCount = newSlotCount / _pageSize;
             var redundant = newSlotCount - (newPageCount * _pageSize);
 
-            if (redundant > 0)
+            if (redundant > 0 || newPageCount == 0)
             {
                 newPageCount += 1;
             }
