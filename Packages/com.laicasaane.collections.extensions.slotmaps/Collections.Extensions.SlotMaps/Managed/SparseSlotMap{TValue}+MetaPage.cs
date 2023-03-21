@@ -10,13 +10,15 @@ namespace Collections.Extensions.SlotMaps
             internal readonly SlotMeta[] _metas;
             internal readonly uint[] _valueIndices;
 
-            private uint _count;
+            private readonly uint[] _count;
 
             public MetaPage(uint size)
             {
                 _metas = new SlotMeta[size];
                 _valueIndices = new uint[size];
-                _count = 0;
+
+                _count = new uint[1];
+                _count[0] = 0;
             }
 
             /// <summary>
@@ -28,7 +30,7 @@ namespace Collections.Extensions.SlotMaps
             internal uint Count
             {
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
-                get => _count;
+                get => _count[0];
             }
 
             public ReadOnlyMemory<SlotMeta> Metas
@@ -195,7 +197,7 @@ namespace Collections.Extensions.SlotMaps
 
                 meta = new(version, SlotState.Occupied);
                 _valueIndices[index] = valueIndex;
-                _count++;
+                _count[0]++;
             }
 
             public bool TryAdd(uint index, in SlotKey key, uint valueIndex)
@@ -235,7 +237,7 @@ namespace Collections.Extensions.SlotMaps
 
                 meta = new(version, SlotState.Occupied);
                 _valueIndices[index] = valueIndex;
-                _count++;
+                _count[0]++;
                 return true;
             }
 
@@ -396,7 +398,7 @@ namespace Collections.Extensions.SlotMaps
                     : new(meta, SlotState.Empty)
                     ;
 
-                _count -= 1;
+                _count[0] -= 1;
                 return true;
             }
 
@@ -412,7 +414,7 @@ namespace Collections.Extensions.SlotMaps
             internal void Clear()
             {
                 Array.Clear(_metas, 0, _metas.Length);
-                _count = 0;
+                _count[0] = 0;
             }
         }
     }

@@ -10,13 +10,15 @@ namespace Collections.Extensions.SlotMaps
             internal readonly SlotMeta[] _metas;
             internal readonly TValue[] _values;
 
-            private uint _count;
+            private readonly uint[] _count;
 
             public Page(uint size)
             {
                 _metas = new SlotMeta[size];
                 _values = new TValue[size];
-                _count = 0;
+
+                _count = new uint[1];
+                _count[0] = 0;
             }
 
             /// <summary>
@@ -28,7 +30,7 @@ namespace Collections.Extensions.SlotMaps
             internal uint Count
             {
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
-                get => _count;
+                get => _count[0];
             }
 
             public ReadOnlyMemory<SlotMeta> Metas
@@ -190,7 +192,7 @@ namespace Collections.Extensions.SlotMaps
 
                 _values[index] = value;
                 meta = new(version, SlotState.Occupied);
-                _count++;
+                _count[0]++;
             }
 
             public bool TryAdd(uint index, in SlotKey key, TValue value)
@@ -230,7 +232,7 @@ namespace Collections.Extensions.SlotMaps
 
                 _values[index] = value;
                 meta = new(version, SlotState.Occupied);
-                _count++;
+                _count[0]++;
                 return true;
             }
 
@@ -383,7 +385,7 @@ namespace Collections.Extensions.SlotMaps
                     : new(meta, SlotState.Empty)
                     ;
 
-                _count -= 1;
+                _count[0] -= 1;
                 return true;
             }
 
@@ -404,6 +406,8 @@ namespace Collections.Extensions.SlotMaps
                 {
                     Array.Clear(_values, 0, _values.Length);
                 }
+
+                _count[0] = 0;
             }
         }
     }
