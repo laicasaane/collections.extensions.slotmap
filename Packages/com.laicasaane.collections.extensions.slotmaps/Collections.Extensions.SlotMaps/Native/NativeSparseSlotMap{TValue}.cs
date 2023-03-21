@@ -426,6 +426,8 @@ namespace Collections.Extensions.SlotMaps
 
             var length = values.Length;
 
+            SetCapacity(_slotCount.Value + (uint)length);
+
             for (var i = 0; i < length; i++)
             {
                 returnKeys[i] = Add(values[i]);
@@ -508,6 +510,12 @@ namespace Collections.Extensions.SlotMaps
 
             var length = values.Length;
             var resultIndex = 0;
+
+            if (TrySetCapacity(_slotCount.Value + (uint)length) == false)
+            {
+                returnKeyCount = 0;
+                return false;
+            }
 
             for (var i = 0; i < length; i++)
             {

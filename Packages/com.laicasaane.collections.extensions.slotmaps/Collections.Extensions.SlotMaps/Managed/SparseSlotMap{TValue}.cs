@@ -391,6 +391,8 @@ namespace Collections.Extensions.SlotMaps
             ref var slotCount = ref _slotCount;
             ref var lastValueIndex = ref _lastValueIndex;
 
+            SetCapacity(slotCount + (uint)length);
+
             for (var i = 0; i < length; i++)
             {
                 ref readonly var value = ref values[i];
@@ -477,6 +479,12 @@ namespace Collections.Extensions.SlotMaps
 
             ref var slotCount = ref _slotCount;
             ref var lastValueIndex = ref _lastValueIndex;
+
+            if (TrySetCapacity(slotCount + (uint)length) == false)
+            {
+                returnKeyCount = 0;
+                return false;
+            }
 
             for (var i = 0; i < length; i++)
             {
