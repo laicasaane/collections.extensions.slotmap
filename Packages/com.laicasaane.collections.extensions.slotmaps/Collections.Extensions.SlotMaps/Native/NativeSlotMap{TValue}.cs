@@ -762,6 +762,60 @@ namespace Collections.Extensions.SlotMaps
             newKey = key.WithVersion(meta.Version);
             return true;
         }
+        
+        public void SetCapacity(uint newSlotCount)
+        {
+            Checks.Require(newSlotCount > _slotCount.Value
+                , $"New slot count must be greater than the current slot count."
+            );
+
+            Checks.Require(newSlotCount <= _maxSlotCount
+                , $"Exceeding the maximum of {_maxSlotCount} slots."
+            );
+
+            Grow(newSlotCount);
+        }
+
+        public bool TrySetCapacity(uint newSlotCount)
+        {
+            if (newSlotCount <= _slotCount.Value)
+            {
+                Checks.Warning(false
+                    , $"New slot count must be greater than the current slot count."
+                );
+
+                return false;
+            }
+
+            if (newSlotCount > _maxSlotCount)
+            {
+                Checks.Warning(false
+                    , $"Exceeding the maximum of {_maxSlotCount} slots."
+                );
+
+                return false;
+            }
+
+            Grow(newSlotCount);
+            return true;
+        }
+
+        private void Grow(uint newSlotCount)
+        {
+            var pageCount = newSlotCount / _allocationSize;
+            var redundant = newSlotCount - (pageCount * _allocationSize);
+
+            if (redundant > 0)
+            {
+                pageCount += 1;
+            }
+
+            var allocSize = pageCount * _allocationSize;
+            var allocator = _allocator;
+
+            _metas.Grow(allocSize, allocator);
+            _values.Grow(allocSize, allocator, NativeArrayOptions.UninitializedMemory);
+        }
 
         /// <summary>
         /// Clear the first page, but remove every other pages.

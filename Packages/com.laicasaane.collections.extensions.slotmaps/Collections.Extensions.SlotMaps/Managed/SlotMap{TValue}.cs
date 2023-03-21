@@ -599,6 +599,47 @@ namespace Collections.Extensions.SlotMaps
             return page.TryUpdateVersion(address.SlotIndex, key, out newKey);
         }
 
+        public void SetCapacity(uint newSlotCount)
+        {
+            Checks.Require(newSlotCount > _slotCount
+                , $"New slot count must be greater than the current slot count."
+            );
+
+            var newPageCount = CalculateNewPageCount(newSlotCount);
+
+            Checks.Require(newPageCount <= _maxPageCount
+                , $"Exceeding the maximum of {_maxPageCount} pages."
+            );
+
+            AddPage(newPageCount);
+        }
+
+        public bool TrySetCapacity(uint newSlotCount)
+        {
+            if (newSlotCount <= _slotCount)
+            {
+                Checks.Warning(false
+                    , $"New slot count must be greater than the current slot count."
+                );
+
+                return false;
+            }
+
+            var newPageCount = CalculateNewPageCount(newSlotCount);
+
+            if (newPageCount > _maxPageCount)
+            {
+                Checks.Warning(false
+                    , $"Exceeding the maximum of {_maxPageCount} pages."
+                );
+
+                return false;
+            }
+
+            AddPage(newPageCount);
+            return true;
+        }
+
         /// <summary>
         /// Clear the first page, but remove every other pages.
         /// </summary>
@@ -688,9 +729,35 @@ namespace Collections.Extensions.SlotMaps
             }
 
             Array.Resize(ref _pages, newPageIndex + 1);
+
             _pages[newPageIndex] = new Page(_pageSize);
 
             return true;
+        }
+
+        private uint CalculateNewPageCount(uint newSlotCount)
+        {
+            var newPageCount = newSlotCount / _pageSize;
+            var redundant = newSlotCount - (newPageCount * _pageSize);
+
+            if (redundant > 0)
+            {
+                newPageCount += 1;
+            }
+
+            return newPageCount;
+        }
+
+        private void AddPage(uint newPageCount)
+        {
+            var index = _pages.Length;
+
+            Array.Resize(ref _pages, (int)newPageCount);
+
+            for (; index < newPageCount; index++)
+            {
+                _pages[index] = new Page(_pageSize);
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

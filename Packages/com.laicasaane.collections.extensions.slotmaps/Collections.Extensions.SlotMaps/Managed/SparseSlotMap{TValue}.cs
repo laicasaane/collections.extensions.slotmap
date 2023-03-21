@@ -797,6 +797,47 @@ namespace Collections.Extensions.SlotMaps
             return metaPage.TryUpdateVersion(address.SlotIndex, key, out newKey);
         }
 
+        public void SetCapacity(uint newSlotCount)
+        {
+            Checks.Require(newSlotCount > _slotCount
+                , $"New slot count must be greater than the current slot count."
+            );
+
+            var newPageCount = CalculateNewPageCount(newSlotCount);
+
+            Checks.Require(newPageCount <= _maxPageCount
+                , $"Exceeding the maximum of {_maxPageCount} pages."
+            );
+
+            AddPage(newPageCount);
+        }
+
+        public bool TrySetCapacity(uint newSlotCount)
+        {
+            if (newSlotCount <= _slotCount)
+            {
+                Checks.Warning(false
+                    , $"New slot count must be greater than the current slot count."
+                );
+
+                return false;
+            }
+
+            var newPageCount = CalculateNewPageCount(newSlotCount);
+
+            if (newPageCount > _maxPageCount)
+            {
+                Checks.Warning(false
+                    , $"Exceeding the maximum of {_maxPageCount} pages."
+                );
+
+                return false;
+            }
+
+            AddPage(newPageCount);
+            return true;
+        }
+
         /// <summary>
         /// Clear the first page, but remove every other pages.
         /// </summary>
@@ -904,15 +945,42 @@ namespace Collections.Extensions.SlotMaps
                 return false;
             }
 
-            var newPageLength = newPageIndex + 1;
+            var newPageCount = newPageIndex + 1;
 
-            Array.Resize(ref _metaPages, newPageLength);
-            Array.Resize(ref _valuePages, newPageLength);
+            Array.Resize(ref _metaPages, newPageCount);
+            Array.Resize(ref _valuePages, newPageCount);
 
             _metaPages[newPageIndex] = new MetaPage(_pageSize);
             _valuePages[newPageIndex] = new ValuePage(_pageSize);
 
             return true;
+        }
+
+        private uint CalculateNewPageCount(uint newSlotCount)
+        {
+            var newPageCount = newSlotCount / _pageSize;
+            var redundant = newSlotCount - (newPageCount * _pageSize);
+
+            if (redundant > 0)
+            {
+                newPageCount += 1;
+            }
+
+            return newPageCount;
+        }
+
+        private void AddPage(uint newPageCount)
+        {
+            var index = _metaPages.Length;
+
+            Array.Resize(ref _metaPages, (int)newPageCount);
+            Array.Resize(ref _valuePages, (int)newPageCount);
+
+            for (; index < newPageCount; index++)
+            {
+                _metaPages[index] = new MetaPage(_pageSize);
+                _valuePages[index] = new ValuePage(_pageSize);
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
